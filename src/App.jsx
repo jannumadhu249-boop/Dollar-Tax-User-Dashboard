@@ -1,0 +1,49 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./Components/Login";
+import Register from "./Components/Register";
+import Dashboard from "./pages/Dashboard";
+import Taxpayer from "./pages/Taxpayer";
+import Spouse from "./pages/Spouse";
+import Dependent from "./pages/Dependent";
+import AddressInTaxYear from "./pages/AddressInTaxYear";
+import BankDetails from "./pages/BankDetails";
+import UploadDocuments from "./pages/UploadDocuments";
+import ChangePassword from "./pages/ChangePassword";
+import ScheduleTaxConsultation from "./pages/ScheduleTaxConsulation";
+import ReferDetails from "./pages/ReferDetails";
+import ReferFriend from "./pages/ReferFriend";
+import DownloadTaxReturns from "./pages/DownloadTaxReturns";
+import FBARQuestionnaire from "./pages/FBARQuestionnaire";
+import TaxOrganizer from "./pages/TaxOrganizer";
+import MyTaxSummary from "./pages/MyTaxSummary";
+import SendQuery from "./pages/SendQuery";
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/basic-info/taxpayer" element={<Taxpayer />} />
+        <Route path="/dashboard/basic-info/spouse" element={<Spouse />} />
+        <Route path="/dashboard/basic-info/dependent" element={<Dependent />} />
+        <Route path="/dashboard/basic-info/address" element={<AddressInTaxYear />} />
+        <Route path="/dashboard/basic-info/bank" element={<BankDetails />} />
+        <Route path="/dashboard/upload" element={<UploadDocuments />} />
+        <Route path="/dashboard/schedule" element={<ScheduleTaxConsultation />} />
+        <Route path="/dashboard/tax-summary" element={<MyTaxSummary />} />
+        <Route path="/dashboard/referrals" element={<ReferDetails />} />
+        <Route path="/referrals/refer-friend" element={<ReferFriend />} />
+        <Route path="/dashboard/download" element={<DownloadTaxReturns />} />
+        <Route path="/dashboard/fbar" element={<FBARQuestionnaire />} />
+        <Route path="/dashboard/organizer" element={<TaxOrganizer />} />
+        <Route path="/send-query" element={<SendQuery />} />
+        <Route path="/change-password" element={<ChangePassword />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
