@@ -84,10 +84,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
       <div className="sidebar-header">
         <div className="logo-container">
-          <div className="logo">
-            <span className="logo-icon">▲▲</span>
-            <span className="logo-text">DollarTax</span>
-          </div>
+          <img
+            src="/images/logo-lg.png"
+            alt="Dollar Tax Filer"
+            className="sidebar-logo"
+          />
         </div>
       </div>
 

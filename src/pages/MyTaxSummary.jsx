@@ -48,7 +48,6 @@ const MyTaxSummary = () => {
         </div>
 
         {/* Footer */}
-
         <Footer />
       </main>
     </div>

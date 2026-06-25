@@ -38,11 +38,6 @@ const ChangePassword = () => {
       <main className="main-content">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-          <div className="nav-left">
-            <Menu size={24} />
-            <span className="page-title">Change Password</span>
-          </div>
-
         {/* Form Content */}
         <div className="form-container">
           <div className="form-card" style={{ maxWidth: "600px", margin: "0 auto" }}>

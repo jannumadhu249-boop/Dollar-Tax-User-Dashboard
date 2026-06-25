@@ -36,15 +36,15 @@ const Login = () => {
               <div
                 className="position-absolute top-0 start-0 w-100 h-100"
                 style={{
-                  background: "rgba(13,110,253,0.85)",
+                  background: "rgba(27, 43, 94, 0.85)",
                 }}
               />
 
               <div className="position-relative">
                 <img
-                  src="/images/logo.png"
-                  alt="logo"
-                  style={{ maxWidth: "180px" }}
+                  src="/images/logo-lg.png"
+                  alt="Dollar Tax Filer"
+                  style={{ maxWidth: "200px", marginBottom: "2rem" }}
                 />
               </div>
 
@@ -137,7 +137,7 @@ const Login = () => {
 
                 <button
                   type="submit"
-                  className="btn btn-primary w-100"
+                  className="btn btn-danger w-100"
                 >
                   Login
                 </button>

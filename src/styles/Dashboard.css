@@ -8,7 +8,7 @@
 /* Sidebar Styles */
 .sidebar {
   width: 280px;
-  background: linear-gradient(180deg, #0a4d4c 0%, #053231 100%);
+  background: linear-gradient(180deg, #C41E3A 0%, #8B1529 100%);
   color: white;
   display: flex;
   flex-direction: column;
@@ -31,28 +31,19 @@
 .sidebar-header {
   padding: 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .logo-container {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.logo-icon {
-  color: #4ecdc4;
-  font-size: 1.5rem;
-}
-
-.logo-text {
-  color: white;
+.sidebar-logo {
+  max-width: 180px;
+  height: auto;
+  display: block;
 }
 
 /* Sidebar Navigation */
@@ -104,7 +95,7 @@
 .nav-item.active {
   background: rgba(255, 255, 255, 0.1);
   color: white !important;
-  border-left: 3px solid #4ecdc4;
+  border-left: 3px solid #FFD700;
   text-decoration: none !important;
 }
 
@@ -137,7 +128,7 @@
 }
 
 .submenu-item.active {
-  color: #4ecdc4 !important;
+  color: #FFD700 !important;
   background: rgba(255, 255, 255, 0.05);
   text-decoration: none !important;
 }
@@ -173,7 +164,7 @@
 }
 
 .btn-help {
-  background: #4ecdc4;
+  background: #1B2B5E;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -185,7 +176,7 @@
 }
 
 .btn-help:hover {
-  background: #3db8af;
+  background: #142044;
 }
 
 /* User Info */
@@ -275,6 +266,12 @@
   gap: 1rem;
 }
 
+.header-logo {
+  max-height: 40px;
+  height: auto;
+  display: block;
+}
+
 .nav-menu-btn {
   background: none;
   border: none;
@@ -290,7 +287,7 @@
 
 .nav-menu-btn:hover {
   background: #f3f4f6;
-  color: #0a4d4c;
+  color: #C41E3A;
 }
 
 .nav-menu-btn:active {
@@ -334,7 +331,7 @@
 }
 
 .btn-refer {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  background: linear-gradient(135deg, #c1334b 0%, #c1334b 100%);
   color: white;
   border: none;
   padding: 0.6rem 1.2rem;
@@ -438,7 +435,7 @@
 }
 
 .step-card:hover {
-  border-color: #4ecdc4;
+  border-color: #C41E3A;
   transform: translateY(-4px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
@@ -461,20 +458,20 @@
 }
 
 .step-icon.step-1 {
-  background: linear-gradient(135deg, #4ecdc4 0%, #3db8af 100%);
+  background: linear-gradient(135deg, #C41E3A 0%, #8B1529 100%);
 }
 
 .step-icon.step-2 {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #1B2B5E 0%, #0F1A3C 100%);
 }
 
 .step-icon.step-3 {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #C41E3A 0%, #8B1529 100%);
 }
 
 .step-number {
   background: white;
-  color: #4ecdc4;
+  color: #C41E3A;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -483,7 +480,7 @@
   justify-content: center;
   font-weight: 700;
   font-size: 1.25rem;
-  border: 2px solid #4ecdc4;
+  border: 2px solid #C41E3A;
 }
 
 .step-card h4 {
@@ -539,7 +536,7 @@
 }
 
 .dashboard-footer a {
-  color: #0a4d4c;
+  color: #C41E3A;
   text-decoration: none;
 }
 
@@ -559,13 +556,13 @@
 }
 
 .breadcrumb a {
-  color: #0a4d4c;
+  color: #C41E3A;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .breadcrumb a:hover {
-  color: #4ecdc4;
+  color: #8B1529;
   text-decoration: underline;
 }
 
@@ -639,8 +636,8 @@
 
 .form-group .form-control:focus {
   outline: none;
-  border-color: #4ecdc4;
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+  border-color: #C41E3A;
+  box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
 }
 
 .form-group textarea.form-control {
@@ -678,7 +675,7 @@
   width: 1rem;
   height: 1rem;
   cursor: pointer;
-  accent-color: #4ecdc4;
+  accent-color: #C41E3A;
 }
 
 /* Form Actions */
@@ -691,7 +688,7 @@
 }
 
 .btn-save {
-  background: #4ecdc4;
+  background: #C41E3A;
   color: white;
   border: none;
   padding: 0.75rem 2rem;
@@ -703,9 +700,9 @@
 }
 
 .btn-save:hover {
-  background: #3db8af;
+  background: #8B1529;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(78, 205, 196, 0.3);
+  box-shadow: 0 4px 8px rgba(196, 30, 58, 0.3);
 }
 
 .btn-save:active {
@@ -766,7 +763,7 @@
 }
 
 .file-upload-label:hover {
-  border-color: #4ecdc4;
+  border-color: #C41E3A;
 }
 
 .file-upload-button {
@@ -800,7 +797,7 @@
 }
 
 .btn-upload {
-  background: #4ecdc4;
+  background: #C41E3A;
   color: white;
   border: none;
   padding: 0.75rem 2rem;
@@ -815,9 +812,9 @@
 }
 
 .btn-upload:hover {
-  background: #3db8af;
+  background: #8B1529;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(78, 205, 196, 0.3);
+  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
 }
 
 /* Password Form */
@@ -848,7 +845,7 @@
 }
 
 .password-toggle-btn:hover {
-  color: #4ecdc4;
+  color: #C41E3A;
 }
 
 .btn-cancel {
@@ -919,7 +916,7 @@
 }
 
 .summary-card-item:hover {
-  border-color: #4ecdc4;
+  border-color: #C41E3A;
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
@@ -1059,7 +1056,7 @@
 }
 
 .refer-info-section {
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  background: linear-gradient(135deg, #1B2B5E 0%, #0F1A3C 100%);
   border-radius: 0.75rem;
   padding: 2.5rem;
   color: white;
@@ -1152,12 +1149,12 @@
   padding: 1rem 1.25rem;
   border-radius: 0.5rem;
   margin-bottom: 2rem;
-  border-left: 4px solid #0d9488;
+  border-left: 4px solid #C41E3A;
 }
 
 .referring-code p {
   font-size: 0.95rem;
-  color: #0d9488;
+  color: #C41E3A;
   margin: 0;
   font-weight: 600;
   font-family: 'Courier New', monospace;
@@ -1189,8 +1186,8 @@
 
 .refer-form-card .form-control:focus {
   outline: none;
-  border-color: #0d9488;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+  border-color: #C41E3A;
+  box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
 }
 
 .refer-form-card .form-control::placeholder {
@@ -1207,7 +1204,7 @@
 
 .refer-form-actions .btn-save {
   flex: 1;
-  background: #0d9488;
+  background: #C41E3A;
   color: white;
   border: none;
   padding: 0.875rem 1.5rem;
@@ -1219,9 +1216,9 @@
 }
 
 .refer-form-actions .btn-save:hover {
-  background: #0f766e;
+  background: #8B1529;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
 }
 
 .refer-form-actions .btn-reset {
@@ -1262,7 +1259,7 @@
 }
 
 .btn-download-fbar {
-  background: #4ecdc4;
+  background: #C41E3A;
   color: white;
   border: none;
   padding: 0.75rem 2rem;
@@ -1277,9 +1274,9 @@
 }
 
 .btn-download-fbar:hover {
-  background: #3db8af;
+  background: #8B1529;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(78, 205, 196, 0.3);
+  box-shadow: 0 4px 8px rgba(196, 30, 58, 0.3);
 }
 
 /* Tax Organizer Styles */
@@ -1992,5 +1989,14 @@
 @media (max-width: 768px) {
   .sidebar-overlay {
     display: block;
+  }
+
+  /* Logo adjustments for mobile */
+  .sidebar-logo {
+    max-width: 150px;
+  }
+
+  .header-logo {
+    max-height: 35px;
   }
 }

@@ -32,7 +32,12 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
         >
           <Menu size={24} />
         </button>
-        <span className="page-title">Home</span>
+        {/* <img
+          src="/images/logo.png"
+          alt="Dollar Tax Filer"
+          className="header-logo"
+        />
+        <span className="page-title">Home</span> */}
       </div>
 
       <div className="nav-right">
