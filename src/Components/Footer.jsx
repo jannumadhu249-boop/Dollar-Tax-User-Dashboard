@@ -4,7 +4,7 @@ const Footer = () => {
   return (
     <footer className="dashboard-footer">
       <p>
-        © Dollar Tax ® 2026. All Rights Reserved.{" "}
+        © Minimum Tax ® 2026. All Rights Reserved.{" "}
         <a href="#">Terms and Conditions</a>
       </p>
     </footer>

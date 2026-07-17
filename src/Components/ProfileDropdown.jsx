@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { User, Key, Moon, LogOut } from "lucide-react";
+import { User, Key, Moon, LogOut, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../styles/ProfileDropdown.css";
 
@@ -44,6 +44,11 @@ const ProfileDropdown = () => {
   const handleChangePassword = () => {
     setIsOpen(false);
     navigate("/change-password");
+  };
+
+  const handleVerifyEmail = () => {
+    setIsOpen(false);
+    navigate("/verify-email");
   };
 
   const toggleDarkMode = () => {
@@ -108,7 +113,14 @@ const ProfileDropdown = () => {
               <span>Change password</span>
             </button>
 
-            <div className="profile-menu-item dark-mode-toggle">
+            <button className="profile-menu-item"
+            onClick={handleVerifyEmail}
+            >
+              <Mail size={20} />
+              <span>Verify email</span>
+            </button>
+
+            {/* <div className="profile-menu-item dark-mode-toggle">
               <Moon size={20} />
               <span>Dark mode</span>
               <label className="toggle-switch">
@@ -119,7 +131,7 @@ const ProfileDropdown = () => {
                 />
                 <span className="toggle-slider"></span>
               </label>
-            </div>
+            </div> */}
 
             <button className="profile-menu-item logout-item" onClick={handleLogout}>
               <LogOut size={20} />

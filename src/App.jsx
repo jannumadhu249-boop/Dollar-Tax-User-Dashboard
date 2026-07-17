@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./Components/Login";
 import Register from "./Components/Register";
+import ForgotPassword from "./Components/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Taxpayer from "./pages/Taxpayer";
 import Spouse from "./pages/Spouse";
@@ -17,6 +18,7 @@ import FBARQuestionnaire from "./pages/FBARQuestionnaire";
 import TaxOrganizer from "./pages/TaxOrganizer";
 import MyTaxSummary from "./pages/MyTaxSummary";
 import SendQuery from "./pages/SendQuery";
+import VerifyEmail from "./pages/VerifyEmail";
 
 function App() {
   return (
@@ -25,6 +27,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/basic-info/taxpayer" element={<Taxpayer />} />
         <Route path="/dashboard/basic-info/spouse" element={<Spouse />} />
@@ -41,6 +44,7 @@ function App() {
         <Route path="/dashboard/organizer" element={<TaxOrganizer />} />
         <Route path="/send-query" element={<SendQuery />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
       </Routes>
     </Router>
   );

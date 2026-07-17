@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, X, Users, Phone, Mail } from "lucide-react";
+import { Menu, X, Users, Phone, Mail, Underline } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ProfileDropdown from "./ProfileDropdown";
 import NotificationDropdown from "./NotificationDropdown";
@@ -32,38 +32,32 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
         >
           <Menu size={24} />
         </button>
-        {/* <img
-          src="/images/logo.png"
-          alt="Dollar Tax Filer"
-          className="header-logo"
-        />
-        <span className="page-title">Home</span> */}
       </div>
 
       <div className="nav-right">
         <div className="contact-info">
-          <div className="contact-item">
+          <a href="tel:+16305929655" className="contact-item">
             <img
               src="https://flagcdn.com/w20/us.png"
               alt="US Flag"
               className="flag-icon"
             />
             <Phone size={14} />
-            <span>+1-623-369-2589</span>
-          </div>
-          <div className="contact-item">
+            <span>+1-630-592-9655</span>
+          </a>
+          <a href="tel:+919515487242" className="contact-item">
             <img
               src="https://flagcdn.com/w20/in.png"
               alt="India Flag"
               className="flag-icon"
             />
             <Phone size={14} />
-            <span>+91-963258741</span>
-          </div>
-          <div className="contact-item">
+            <span>+91-9515487242</span>
+          </a>
+          <a href="mailto:contact@minimumtax.com" className="contact-item">
             <Mail size={14} />
-            <span>dollar@tax.com</span>
-          </div>
+            <span>contact@minimumtax.com</span>
+          </a>
         </div>
 
         <div className="nav-actions">

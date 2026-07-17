@@ -1,59 +1,154 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, User, Mail, Phone, Globe, Lock } from "lucide-react";
+import { URLS } from "../url";
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    contact_number: "",
+    alter_number: "",
+    email: "",
+    password: "",
+    time_zone: "America/New_York",
+    countryCode: "+1",
+    terms: false,
+  });
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Static registration - no validation required
-    localStorage.setItem('user', JSON.stringify({ 
-      email: 'demo@minimumtax.com',
-      name: 'Balakrishna Burra'
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
     }));
-    
-    // Navigate to dashboard
-    navigate('/dashboard');
+    if (error) setError("");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    // Basic validation
+    if (!formData.first_name.trim() || !formData.last_name.trim()) {
+      setError("First name and last name are required.");
+      return;
+    }
+    if (!formData.email.trim()) {
+      setError("Email is required.");
+      return;
+    }
+    if (!formData.contact_number.trim()) {
+      setError("Phone number is required.");
+      return;
+    }
+    if (!formData.password) {
+      setError("Password is required.");
+      return;
+    }
+    if (!formData.terms) {
+      setError("You must agree to the Terms and Conditions.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const body = new FormData();
+      body.append("first_name", formData.first_name.trim());
+      body.append("last_name", formData.last_name.trim());
+      body.append("contact_number", formData.contact_number.trim());
+      body.append("alter_number", formData.alter_number.trim() || formData.contact_number.trim());
+      body.append("time_zone", formData.time_zone);
+      body.append("email", formData.email.trim());
+      body.append("password", formData.password);
+      body.append("current_stage", "New");
+      body.append("stage", "Pending");
+      body.append("filestatus", "Open");
+      body.append("stat", "1");
+      body.append("user_ip", "");
+      body.append("new_dnos", "0");
+      body.append("new_upload", "false");
+      body.append("docs_updated", "false");
+      body.append("old_client", "false");
+      body.append("tin_type", "SSN");
+
+      const response = await fetch(URLS.Registration, {
+        method: "POST",
+        body,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store user info in localStorage
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            member_id: data.data.member_id,
+            year_id: data.data.year_id,
+            file_no: data.data.file_no,
+            first_name: data.data.first_name,
+            last_name: data.data.last_name,
+            email: data.data.email,
+            contact_number: data.data.contact_number,
+            image: data.data.image,
+            financial_year: data.data.financial_year,
+          })
+        );
+        navigate("/login");
+      } else {
+        setError(data.message || "Registration failed. Please try again.");
+      }
+    } catch (err) {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="container-fluid bg-dark min-vh-100 py-4">
-      <div className="container">
-        <div className="row min-vh-100">
-          {/* Left Side */}
-          <div className="col-lg-7 p-0">
+    <div className="container-fluid p-0 min-vh-100 d-flex align-items-stretch" style={{ overflowX: "hidden", backgroundColor: "#f3f4f6" }}>
+      <div className="row g-0 w-100 min-vh-100">
+        {/* Left Side */}
+        <div className="col-lg-7 p-0 d-none d-lg-flex flex-column text-white position-relative" style={{ minHeight: "100vh" }}>
+          <div
+            className="h-100 d-flex flex-column justify-content-center align-items-center text-white text-center p-5 position-relative"
+            style={{
+              backgroundImage: "url('/images/tax-deduction.jpg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              flex: 1,
+            }}
+          >
+            {/* Dark overlay */}
             <div
-              className="h-100 d-flex flex-column text-white p-5 position-relative"
+              className="position-absolute top-0 start-0 w-100 h-100"
               style={{
-                backgroundImage: "url('/images/abt-img.png')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
+                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 27, 75, 0.88) 100%)",
               }}
-            >
-              <div
-                className="position-absolute top-0 start-0 w-100 h-100"
-                style={{
-                  background: "rgba(27, 43, 94, 0.85)",
-                }}
+            />
+
+            {/* Centered content */}
+            <div className="position-relative d-flex flex-column align-items-center" style={{ maxWidth: "480px", width: "100%" }}>
+              <img
+                src="/images/logo-white.png"
+                alt="Tax Filer"
+                style={{ maxWidth: "180px", marginBottom: "2.5rem" }}
               />
 
-              <div className="position-relative">
-                <img
-                  src="/images/logo-lg.png"
-                  alt="Dollar Tax Filer"
-                  style={{ maxWidth: "200px", marginBottom: "2rem" }}
-                />
-              </div>
+              <h1 className="fw-bold text-white mb-4" style={{ fontSize: "2.8rem", lineHeight: 1.2 }}>
+                Join Us <span style={{ color: "#fbbf24" }}>!</span>
+              </h1>
+              <p className="mb-5 text-white-50" style={{ fontSize: "1.05rem" }}>
+                Start your tax journey — Secure &amp; Free
+              </p>
 
-              <div className="position-relative my-auto">
-                <h1 className="fw-bold mb-5">
-                  Join Us <span style={{ color: "#053231" }}>!</span>
-                </h1>
-
+              <div className="w-100" style={{ maxWidth: "340px" }}>
                 {[
                   "FREE Federal Tax Return",
                   "Free Tax Estimates",
@@ -62,131 +157,204 @@ const Register = () => {
                 ].map((item, index) => (
                   <div
                     key={index}
-                    className="d-flex align-items-center mb-4"
+                    className="d-flex align-items-center mb-3"
+                    style={{ background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px 16px" }}
                   >
-                    <CheckCircle size={28} />
-                    <h5 className="ms-3 mb-0">{item}</h5>
+                    <CheckCircle size={22} style={{ color: "#fbbf24", flexShrink: 0 }} />
+                    <span className="ms-3 fw-normal" style={{ letterSpacing: "0.4px", fontSize: "0.97rem" }}>{item}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Right Side */}
-          <div className="col-lg-5 bg-white d-flex align-items-center">
-            <div className="w-100 p-4 p-lg-5">
-              <h3 className="text-center mb-4">Create Account</h3>
+        {/* Right Side */}
+        <div className="col-lg-5 bg-white d-flex align-items-center">
+          <div className="w-100 p-4 p-lg-5">
+            <h3 className="text-center mb-1 fw-bold" style={{ color: "#1e1b4b", fontSize: "1.6rem" }}>Create Account</h3>
+            <p className="text-center text-muted mb-4" style={{ fontSize: "0.88rem" }}>Fill in your details to get started</p>
 
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label className="form-label">Full Name</label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    className="form-control"
-                    placeholder="Enter Full Name"
-                  />
+            {/* Error Alert */}
+            {error && (
+              <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              {/* First Name & Last Name */}
+              <div className="row g-2 mb-3">
+                <div className="col-6">
+                  <label className="form-label">First Name</label>
+                  <div className="auth-field-wrap">
+                    <span className="auth-icon"><User size={16} /></span>
+                    <input
+                      type="text"
+                      name="first_name"
+                      className="form-control"
+                      placeholder="John"
+                      value={formData.first_name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
                 </div>
+                <div className="col-6">
+                  <label className="form-label">Last Name</label>
+                  <div className="auth-field-wrap">
+                    <span className="auth-icon"><User size={16} /></span>
+                    <input
+                      type="text"
+                      name="last_name"
+                      className="form-control"
+                      placeholder="Doe"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
 
-                <div className="mb-3">
-                  <label className="form-label">Email</label>
+              <div className="mb-3">
+                <label className="form-label">Email</label>
+                <div className="auth-field-wrap">
+                  <span className="auth-icon"><Mail size={16} /></span>
                   <input
                     type="email"
                     name="email"
                     className="form-control"
-                    placeholder="Enter Email"
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
                   />
                 </div>
+              </div>
 
-                <div className="mb-3">
-                  <label className="form-label">Phone Number</label>
+              <div className="mb-3">
+                <label className="form-label">Phone Number</label>
+                <div className="input-group" style={{ borderRadius: "10px", overflow: "hidden" }}>
+                  <select
+                    className="form-select"
+                    style={{ maxWidth: "110px", borderRight: "1.5px solid #e2e8f0" }}
+                    name="countryCode"
+                    value={formData.countryCode}
+                    onChange={handleChange}
+                  >
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+61">🇦🇺 +61</option>
+                    <option value="+1">🇨🇦 +1</option>
+                  </select>
                   <input
                     type="tel"
-                    name="phone"
+                    name="contact_number"
                     className="form-control"
-                    placeholder="Enter Phone Number"
+                    placeholder="(555) 000-0000"
+                    value={formData.contact_number}
+                    onChange={handleChange}
+                    required
                   />
                 </div>
+              </div>
 
-                <div className="mb-3 position-relative">
-                  <label className="form-label">Password</label>
+              <div className="mb-3">
+                <label className="form-label">Alternate Number <span className="text-muted" style={{ fontSize: "0.8rem" }}>(optional)</span></label>
+                <div className="auth-field-wrap">
+                  <span className="auth-icon"><Phone size={16} /></span>
+                  <input
+                    type="tel"
+                    name="alter_number"
+                    className="form-control"
+                    placeholder="Alternate phone"
+                    value={formData.alter_number}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Time Zone</label>
+                <select
+                  name="time_zone"
+                  className="form-select"
+                  value={formData.time_zone}
+                  onChange={handleChange}
+                >
+                  <option value="America/New_York">Eastern Time (US &amp; Canada)</option>
+                  <option value="America/Chicago">Central Time (US &amp; Canada)</option>
+                  <option value="America/Denver">Mountain Time (US &amp; Canada)</option>
+                  <option value="America/Los_Angeles">Pacific Time (US &amp; Canada)</option>
+                  <option value="Asia/Kolkata">India Standard Time (IST)</option>
+                  <option value="UTC">Coordinated Universal Time (UTC)</option>
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Password</label>
+                <div className="auth-field-wrap">
+                  <span className="auth-icon"><Lock size={16} /></span>
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     className="form-control"
-                    placeholder="Enter Password"
+                    placeholder="Create a strong password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    style={{ paddingRight: "44px" }}
+                    required
                   />
-                  <button
-                    type="button"
-                    className="btn border-0 position-absolute"
-                    style={{
-                      right: "10px",
-                      top: "38px",
-                    }}
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <Eye size={18} />
-                    ) : (
-                      <EyeOff size={18} />
-                    )}
+                  <button type="button" className="eye-btn" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <Eye size={17} /> : <EyeOff size={17} />}
                   </button>
                 </div>
-
-                <div className="mb-3 position-relative">
-                  <label className="form-label">Confirm Password</label>
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    className="form-control"
-                    placeholder="Confirm Password"
-                  />
-                  <button
-                    type="button"
-                    className="btn border-0 position-absolute"
-                    style={{
-                      right: "10px",
-                      top: "38px",
-                    }}
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? (
-                      <Eye size={18} />
-                    ) : (
-                      <EyeOff size={18} />
-                    )}
-                  </button>
-                </div>
-
-                <div className="mb-4">
-                  <div className="form-check">
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      id="terms"
-                    />
-                    <label htmlFor="terms" className="form-check-label">
-                      I agree to the <a href="/terms">Terms and Conditions</a>
-                    </label>
-                  </div>
-                </div>
-
-                <button type="submit" className="btn btn-danger w-100">
-                  Register
-                </button>
-              </form>
-
-              <div className="d-flex align-items-center my-4">
-                <hr className="flex-grow-1" />
-                <span className="mx-2">Or</span>
-                <hr className="flex-grow-1" />
               </div>
 
-              <p className="text-center mb-0">
-                Already have an account?{" "}
-                <Link to="/login">Login</Link>
-              </p>
+              <div className="mb-4">
+                <div className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="terms"
+                    name="terms"
+                    checked={formData.terms}
+                    onChange={handleChange}
+                  />
+                  <label htmlFor="terms" className="form-check-label">
+                    I agree to the{" "}
+                    <a href="/terms" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: "600" }}>Terms and Conditions</a>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-danger btn-auth w-100 py-2"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Creating Account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
+              </button>
+            </form>
+
+            <div className="d-flex align-items-center my-4">
+              <hr className="flex-grow-1" />
+              <span className="mx-2 text-muted" style={{ fontSize: "0.85rem" }}>Or</span>
+              <hr className="flex-grow-1" />
             </div>
+
+            <p className="text-center mb-0" style={{ fontSize: "0.9rem", color: "#64748b" }}>
+              Already have an account?{" "}
+              <Link to="/login" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: "600" }}>Sign In</Link>
+            </p>
           </div>
         </div>
       </div>

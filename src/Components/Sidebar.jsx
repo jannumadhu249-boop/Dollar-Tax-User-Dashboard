@@ -81,85 +81,87 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   return (
-    <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
-      <div className="sidebar-header">
-        <div className="logo-container">
-          <img
-            src="/images/logo-lg.png"
-            alt="Dollar Tax Filer"
-            className="sidebar-logo"
-          />
-        </div>
-      </div>
-
-      <nav className="sidebar-nav">
-        {menuItems.map((item, index) => (
-          <div key={index}>
-            <a
-              href="#"
-              className={`nav-item ${
-                location.pathname === item.path || (item.hasSubmenu && isBasicInfoActive)
-                  ? "active"
-                  : ""
-              }`}
-              onClick={(e) => {
-                e.preventDefault();
-                handleMenuClick(item);
-              }}
-            >
-              <item.icon size={20} />
-              <span>{item.label}</span>
-              {item.hasSubmenu &&
-                (basicInfoOpen ? (
-                  <ChevronDown size={16} className="nav-arrow" />
-                ) : (
-                  <ChevronRight size={16} className="nav-arrow" />
-                ))}
-            </a>
-
-            {/* Submenu for Basic Information */}
-            {item.hasSubmenu && basicInfoOpen && (
-              <div className="submenu">
-                {item.submenu.map((subItem, subIndex) => (
-                  <a
-                    key={subIndex}
-                    href="#"
-                    className={`submenu-item ${
-                      location.pathname === subItem.path ? "active" : ""
-                    }`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSubmenuClick(subItem.path);
-                    }}
-                  >
-                    <span className="submenu-dot">•</span>
-                    <span>{subItem.label}</span>
-                  </a>
-                ))}
-              </div>
-            )}
+    <>
+      <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
+        <div className="sidebar-header">
+          <div className="logo-container">
+            <img
+              src="/images/logo-white.png"
+              alt="Tax Filer"
+              className="sidebar-logo"
+            />
           </div>
-        ))}
-      </nav>
-
-      <div className="help-section">
-        <div className="help-card">
-          <h4>Help Center</h4>
-          <p>Please contact us for more questions.</p>
-          <button 
-            className="btn-help"
-            onClick={() => setIsQueryModalOpen(true)}
-          >
-            Send Query
-          </button>
         </div>
-      </div>
+
+        <nav className="sidebar-nav">
+          {menuItems.map((item, index) => (
+            <div key={index}>
+              <a
+                href="#"
+                className={`nav-item ${
+                  location.pathname === item.path || (item.hasSubmenu && isBasicInfoActive)
+                    ? "active"
+                    : ""
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMenuClick(item);
+                }}
+              >
+                <item.icon size={20} />
+                <span>{item.label}</span>
+                {item.hasSubmenu &&
+                  (basicInfoOpen ? (
+                    <ChevronDown size={16} className="nav-arrow" />
+                  ) : (
+                    <ChevronRight size={16} className="nav-arrow" />
+                  ))}
+              </a>
+
+              {/* Submenu for Basic Information */}
+              {item.hasSubmenu && basicInfoOpen && (
+                <div className="submenu">
+                  {item.submenu.map((subItem, subIndex) => (
+                    <a
+                      key={subIndex}
+                      href="#"
+                      className={`submenu-item ${
+                        location.pathname === subItem.path ? "active" : ""
+                      }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSubmenuClick(subItem.path);
+                      }}
+                    >
+                      <span className="submenu-dot">•</span>
+                      <span>{subItem.label}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div className="help-section">
+          <div className="help-card">
+            <h4>Help Center</h4>
+            <p>Please contact us for more questions.</p>
+            <button 
+              className="btn-help"
+              onClick={() => setIsQueryModalOpen(true)}
+            >
+              Send Query
+            </button>
+          </div>
+        </div>
+      </aside>
 
       <SendQueryModal 
         isOpen={isQueryModalOpen}
         onClose={() => setIsQueryModalOpen(false)}
       />
-    </aside>
+    </>
   );
 };
 

@@ -52,18 +52,7 @@ const ReferDetails = () => {
           <span className="breadcrumb-current">Referrals Details</span>
         </div>
 
-        {/* Content */}
-        <div className="form-container">
-          <div className="form-card">
-            <div className="referral-header-section">
-              <h3 className="form-title">Referrals Details</h3>
-              <button className="btn-refer-friend-action" onClick={handleReferFriend}>
-                <Users size={18} />
-                Refer Your Friend
-              </button>
-            </div>
-
-            {/* Summary Cards */}
+          {/* Summary Cards */}
             <div className="referral-summary-cards">
               <div className="summary-card-item">
                 <div className="summary-label">TOTAL</div>
@@ -78,6 +67,33 @@ const ReferDetails = () => {
                 <div className="summary-value">$0.00</div>
               </div>
             </div>
+
+        {/* Content */}
+        <div className="form-container">
+          <div className="form-card">
+            <div className="referral-header-section">
+              <h3 className="form-title">Referrals Details</h3>
+              <button className="btn-refer-friend-action" onClick={handleReferFriend}>
+                <Users size={18} />
+                Refer Your Friend
+              </button>
+            </div>
+
+            {/* Summary Cards */}
+            {/* <div className="referral-summary-cards">
+              <div className="summary-card-item">
+                <div className="summary-label">TOTAL</div>
+                <div className="summary-value">$0.00</div>
+              </div>
+              <div className="summary-card-item">
+                <div className="summary-label">PAID</div>
+                <div className="summary-value">$0.00</div>
+              </div>
+              <div className="summary-card-item">
+                <div className="summary-label">BAL</div>
+                <div className="summary-value">$0.00</div>
+              </div>
+            </div> */}
 
             {/* Table */}
             <div className="table-card" style={{ marginTop: '2rem' }}>
