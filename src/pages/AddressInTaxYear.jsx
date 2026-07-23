@@ -2,25 +2,239 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "../Components/Sidebar";
 import Header from "../Components/Header";
 import Footer from "../Components/Footer";
-import { useNavigate } from "react-router-dom";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { URLS } from "../url";
 import "../styles/Dashboard.css";
+
+/* ─── helpers ─────────────────────────────────────────────────── */
+const toDate = (iso) => (iso ? new Date(iso) : null);
+const toDateStr = (d) => {
+  if (!d) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+const fmtDate = (iso) => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+};
+
+const EMPTY_FORM = {
+  person: "",
+  state_id: "",
+  address_from: null,
+  address_to: null,
+};
 
 const AddressInTaxYear = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const navigate = useNavigate();
+  const today = new Date();
+
+  // states options
+  const [states, setStates] = useState([]);
+  const [statesLoading, setStatesLoading] = useState(true);
+
+  // address list
+  const [addresses, setAddresses] = useState([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState("");
+
+  // form state
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
+
+  // delete loading state
+  const [deletingId, setDeletingId] = useState(null);
+
+  /* Sidebar resize */
+  useEffect(() => {
+    const handleResize = () => setSidebarOpen(window.innerWidth > 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  /* ── 1. GET States ───────────────────────────────────────────── */
+  const fetchStates = async () => {
+    setStatesLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(URLS.GetStates, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setStates(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching states:", err);
+    } finally {
+      setStatesLoading(false);
+    }
+  };
+
+  /* ── 2. GET Addresses ────────────────────────────────────────── */
+  const fetchAddresses = async () => {
+    setListLoading(true);
+    setListError("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(URLS.GetAddressTaxPayer, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAddresses(data.data || []);
+      } else {
+        setListError(data.message || "Failed to fetch addresses.");
+      }
+    } catch (err) {
+      setListError("Network error fetching addresses.");
+    } finally {
+      setListLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth <= 768) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    fetchStates();
+    fetchAddresses();
   }, []);
+
+  /* ── 3. Open Add Form ─────────────────────────────────────────── */
+  const openAdd = () => {
+    setEditId(null);
+    setForm(EMPTY_FORM);
+    setFormError("");
+    setFormSuccess("");
+    setShowForm(true);
+  };
+
+  /* ── 4. Open Edit Form (Get By ID) ────────────────────────────── */
+  const openEdit = async (id) => {
+    setFormError("");
+    setFormSuccess("");
+    setShowForm(true);
+    setEditId(id);
+    setForm(EMPTY_FORM);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(URLS.GetByIdAddressTaxPayer + id, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const d = data.data;
+        setForm({
+          person: d.person || "",
+          state_id: d.state_id || (d.state ? d.state._id : "") || "",
+          address_from: toDate(d.address_from),
+          address_to: toDate(d.address_to),
+        });
+      } else {
+        setFormError(data.message || "Failed to load address record.");
+      }
+    } catch {
+      setFormError("Network error loading address record.");
+    }
+  };
+
+  /* ── 5. Save (Create or Update) ────────────────────────────────── */
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setFormError("");
+    setFormSuccess("");
+    setSaving(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const body = {
+        person: form.person,
+        state_id: form.state_id,
+        address_from: toDateStr(form.address_from),
+        address_to: toDateStr(form.address_to),
+      };
+
+      const url = editId ? URLS.UpdateAddressTaxPayer + editId : URLS.CreateAddressTaxPayer;
+      const method = editId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setFormSuccess(data.message || (editId ? "Address updated successfully." : "Address created successfully."));
+        await fetchAddresses();
+        if (!editId) {
+          setTimeout(() => {
+            setShowForm(false);
+          }, 1200);
+        }
+      } else {
+        setFormError(data.message || "Failed to save address.");
+      }
+    } catch {
+      setFormError("Network error saving address.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── 6. Delete Address ─────────────────────────────────────────── */
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this address entry?")) return;
+    setDeletingId(id);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(URLS.DeleteAddressTaxPayer + id, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchAddresses();
+        if (editId === id) setShowForm(false);
+      } else {
+        alert(data.message || "Failed to delete address.");
+      }
+    } catch {
+      alert("Network error deleting address.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const setField = (key, val) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    if (formError) setFormError("");
+    if (formSuccess) setFormSuccess("");
+  };
 
   return (
     <div className="dashboard-container">
@@ -38,98 +252,241 @@ const AddressInTaxYear = () => {
           <span className="breadcrumb-current">Address</span>
         </div>
 
-        {/* Form Content */}
         <div className="form-container">
-          <div className="form-card">
-            <h3 className="form-title">Addresses in Tax Year 2025</h3>
-            <p className="form-description">
-              Please provide us the period of each state where the taxpayer and spouse lived in during the Tax Year.
-            </p>
 
-            <div className="address-grid">
-              <div className="form-group">
-                <label>Select Person</label>
-                <select className="form-control">
-                  <option>-Select Person-</option>
-                  <option>Taxpayer</option>
-                  <option>Spouse</option>
-                  <option>Both</option>
-                </select>
+          {/* ── Addresses List Card ────────────────────────────────────── */}
+          <div className="form-card" style={{ marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <div>
+                <h3 className="form-title" style={{ margin: 0 }}>Addresses in Tax Year</h3>
+                <p className="form-description" style={{ margin: "0.25rem 0 0 0" }}>
+                  Please provide the period of each state where the taxpayer and spouse lived in during the Tax Year.
+                </p>
               </div>
-
-              <div className="form-group">
-                <label>State</label>
-                <select className="form-control">
-                  <option>Select state</option>
-                  <option>Alabama</option>
-                  <option>Alaska</option>
-                  <option>Arizona</option>
-                  <option>Arkansas</option>
-                  <option>California</option>
-                  <option>Colorado</option>
-                  <option>Connecticut</option>
-                  <option>Delaware</option>
-                  <option>Florida</option>
-                  <option>Georgia</option>
-                  <option>Hawaii</option>
-                  <option>Idaho</option>
-                  <option>Illinois</option>
-                  <option>Indiana</option>
-                  <option>Iowa</option>
-                  <option>Kansas</option>
-                  <option>Kentucky</option>
-                  <option>Louisiana</option>
-                  <option>Maine</option>
-                  <option>Maryland</option>
-                  <option>Massachusetts</option>
-                  <option>Michigan</option>
-                  <option>Minnesota</option>
-                  <option>Mississippi</option>
-                  <option>Missouri</option>
-                  <option>Montana</option>
-                  <option>Nebraska</option>
-                  <option>Nevada</option>
-                  <option>New Hampshire</option>
-                  <option>New Jersey</option>
-                  <option>New Mexico</option>
-                  <option>New York</option>
-                  <option>North Carolina</option>
-                  <option>North Dakota</option>
-                  <option>Ohio</option>
-                  <option>Oklahoma</option>
-                  <option>Oregon</option>
-                  <option>Pennsylvania</option>
-                  <option>Rhode Island</option>
-                  <option>South Carolina</option>
-                  <option>South Dakota</option>
-                  <option>Tennessee</option>
-                  <option>Texas</option>
-                  <option>Utah</option>
-                  <option>Vermont</option>
-                  <option>Virginia</option>
-                  <option>Washington</option>
-                  <option>West Virginia</option>
-                  <option>Wisconsin</option>
-                  <option>Wyoming</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>From</label>
-                <input type="text" className="form-control" placeholder="MM/DD/YYYY" />
-              </div>
-
-              <div className="form-group">
-                <label>To</label>
-                <input type="text" className="form-control" placeholder="MM/DD/YYYY" />
-              </div>
+              <button
+                className="btn-save"
+                style={{ padding: "0.5rem 1.25rem", fontSize: "0.875rem", whiteSpace: "nowrap" }}
+                onClick={openAdd}
+              >
+                + Add Address
+              </button>
             </div>
 
-            {/* Submit Button */}
-            <div className="form-actions">
-              <button className="btn-save">Submit</button>
-            </div>
+            {listError && (
+              <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
+                {listError}
+              </div>
+            )}
+
+            {listLoading ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="mt-2 text-muted" style={{ fontSize: "0.9rem" }}>Fetching Addresses...</p>
+              </div>
+            ) : addresses.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "2.5rem 0", color: "#94a3b8" }}>
+                <p style={{ fontSize: "0.95rem" }}>No address records added yet.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+                  <thead>
+                    <tr style={{ background: "rgba(99,102,241,0.08)", textAlign: "left" }}>
+                      {["Person", "State", "From", "To", "Actions"].map((h) => (
+                        <th key={h} style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {addresses.map((addr, i) => (
+                      <tr
+                        key={addr._id}
+                        style={{
+                          borderBottom: "1px solid rgba(0,0,0,0.06)",
+                          background: i % 2 === 0 ? "transparent" : "rgba(99,102,241,0.02)",
+                        }}
+                      >
+                        <td style={{ padding: "0.75rem 1rem", color: "#1e293b", fontWeight: 500 }}>
+                          {addr.person || "—"}
+                        </td>
+                        <td style={{ padding: "0.75rem 1rem", color: "#64748b" }}>
+                          {addr.state?.name || addr.state_id || "—"}
+                        </td>
+                        <td style={{ padding: "0.75rem 1rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                          {fmtDate(addr.address_from)}
+                        </td>
+                        <td style={{ padding: "0.75rem 1rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                          {fmtDate(addr.address_to)}
+                        </td>
+                        <td style={{ padding: "0.75rem 1rem", whiteSpace: "nowrap" }}>
+                          <button
+                            onClick={() => openEdit(addr._id)}
+                            style={{
+                              marginRight: "0.5rem",
+                              padding: "0.3rem 0.85rem",
+                              border: "none",
+                              borderRadius: "6px",
+                              background: "rgba(99,102,241,0.12)",
+                              color: "#6366f1",
+                              fontWeight: 600,
+                              fontSize: "0.8rem",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(addr._id)}
+                            disabled={deletingId === addr._id}
+                            style={{
+                              padding: "0.3rem 0.85rem",
+                              border: "none",
+                              borderRadius: "6px",
+                              background: "rgba(239,68,68,0.1)",
+                              color: "#dc2626",
+                              fontWeight: 600,
+                              fontSize: "0.8rem",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {deletingId === addr._id ? "..." : "Delete"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
+
+          {/* ── Add / Edit Form Card ────────────────────────────────────── */}
+          {showForm && (
+            <div className="form-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                <h3 className="form-title" style={{ margin: 0 }}>
+                  {editId ? "Edit Address" : "Add Address"}
+                </h3>
+                <button
+                  onClick={() => setShowForm(false)}
+                  style={{
+                    background: "none", border: "none", fontSize: "1.25rem",
+                    cursor: "pointer", color: "#94a3b8", lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {formError && (
+                <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
+                  {formError}
+                </div>
+              )}
+              {formSuccess && (
+                <div className="alert alert-success py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
+                  {formSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleSave}>
+                <div className="address-grid">
+                  <div className="form-group">
+                    <label>Select Person <span className="required">*</span></label>
+                    <select
+                      className="form-control"
+                      value={form.person}
+                      onChange={(e) => setField("person", e.target.value)}
+                      required
+                    >
+                      <option value="">-Select Person-</option>
+                      <option value="Taxpayer">Taxpayer</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Both">Both</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>State <span className="required">*</span></label>
+                    <select
+                      className="form-control"
+                      value={form.state_id}
+                      onChange={(e) => setField("state_id", e.target.value)}
+                      required
+                      disabled={statesLoading}
+                    >
+                      <option value="">
+                        {statesLoading ? "Loading states..." : "Select state"}
+                      </option>
+                      {states.map((st) => (
+                        <option key={st._id} value={st._id}>
+                          {st.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>From <span className="required">*</span></label>
+                    <DatePicker
+                      selected={form.address_from}
+                      onChange={(date) => setField("address_from", date)}
+                      dateFormat="MM/dd/yyyy"
+                      className="form-control"
+                      placeholderText="MM/DD/YYYY"
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
+                      maxDate={form.address_to && form.address_to < today ? form.address_to : today}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>To <span className="required">*</span></label>
+                    <DatePicker
+                      selected={form.address_to}
+                      onChange={(date) => setField("address_to", date)}
+                      dateFormat="MM/dd/yyyy"
+                      className="form-control"
+                      placeholderText="MM/DD/YYYY"
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
+                      minDate={form.address_from || undefined}
+                      maxDate={today}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-actions" style={{ marginTop: "1.5rem" }}>
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => setShowForm(false)}
+                    style={{ marginRight: "0.75rem" }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-save" disabled={saving}>
+                    {saving ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Saving...
+                      </>
+                    ) : editId ? (
+                      "Update"
+                    ) : (
+                      "Submit"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -7,7 +7,9 @@ import {
   FileText,
   Upload,
   Calendar,
+  Mail,
 } from "lucide-react";
+import { getStoredUser, isEmailVerified } from "../utils/user";
 import "../styles/Dashboard.css";
 
 const Dashboard = () => {
@@ -16,12 +18,19 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (!userData) {
-      navigate("/login");
-    } else {
-      setUser(JSON.parse(userData));
-    }
+    const loadUser = () => {
+      const storedUser = getStoredUser();
+      if (!storedUser) {
+        navigate("/login");
+      } else {
+        setUser(storedUser);
+      }
+    };
+
+    loadUser();
+
+    const handleUserUpdated = () => loadUser();
+    window.addEventListener("user-updated", handleUserUpdated);
 
     // Handle initial sidebar state based on screen size
     const handleResize = () => {
@@ -39,7 +48,10 @@ const Dashboard = () => {
     window.addEventListener('resize', handleResize);
 
     // Cleanup
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("user-updated", handleUserUpdated);
+    };
   }, [navigate]);
 
   if (!user) return null;
@@ -64,6 +76,22 @@ const Dashboard = () => {
 
         {/* Dashboard Content */}
         <div className="dashboard-content">
+          {!isEmailVerified(user) && (
+            <div className="email-verify-banner">
+              <div className="email-verify-banner-content">
+                <Mail size={22} className="email-verify-banner-icon" />
+                <p>Your email is not verified please verify your email.</p>
+              </div>
+              <button
+                type="button"
+                className="email-verify-banner-btn"
+                onClick={() => navigate("/verify-email")}
+              >
+                Verify Email
+              </button>
+            </div>
+          )}
+
           <div className="welcome-banner">
             <h2>Dear {user?.name || "Balakrishna Burra"},</h2>
             <p>

@@ -16,4 +16,32 @@ export const URLS = {
     GenerateOtp : base_url + "v1/minimumTax/user/auth/generateForgotPasswordOtp",
     VerifyOtp : base_url + "v1/minimumTax/user/auth/verifyForgotPasswordOtp",
     ResetPassword : base_url + "v1/minimumTax/user/auth/resetPassword",
+
+    // TaxPayer
+    GetTaxPayer : base_url + "v1/minimumTax/user/taxpayer/getTaxpayer",
+    UpdateTaxPayer : base_url + "v1/minimumTax/user/taxpayer/updateTaxpayer",
+
+    // Spouse 
+    GetSpouse : base_url + "v1/minimumTax/user/spouse/getSpouse",
+    UpdateSpouse : base_url + "v1/minimumTax/user/spouse/updateSpouse",
+
+    // Dependent
+    GetDependent : base_url  + "v1/minimumTax/user/dependent/getDependents",
+    CreateDependent : base_url + "v1/minimumTax/user/dependent/createDependent",
+    GetByIdDenpendent : base_url + "v1/minimumTax/user/dependent/getDependentById/",
+    UpdateDependent : base_url + "v1/minimumTax/user/dependent/updateDependent/",
+    DeleteDependent : base_url + "v1/minimumTax/user/dependent/deleteDependent/",
+
+    // Address Tax Payer
+    GetAddressTaxPayer : base_url + "v1/minimumTax/user/address/getAddress",
+    GetStates : base_url + "v1/minimumTax/user/address/getStates",
+    CreateAddressTaxPayer : base_url + "v1/minimumTax/user/address/createAddress",
+    GetByIdAddressTaxPayer : base_url + "v1/minimumTax/user/address/getAddressById/",
+    UpdateAddressTaxPayer : base_url + "v1/minimumTax/user/address/updateAddress/",
+    DeleteAddressTaxPayer : base_url + "v1/minimumTax/user/address/deleteAddress/",
+
+    // Bank Details
+    GetBankDetails : base_url + "v1/minimumTax/user/bankDetails/getBankDetails",
+    UpdateBankDetails : base_url + "v1/minimumTax/user/bankDetails/updateBankDetails",
+
 }

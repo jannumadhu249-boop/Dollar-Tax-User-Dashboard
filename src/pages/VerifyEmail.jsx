@@ -185,6 +185,7 @@ const VerifyEmail = () => {
               "user",
               JSON.stringify({ ...user, email_verified: true })
             );
+            window.dispatchEvent(new Event("user-updated"));
           }
         } catch {
           /* ignore storage errors */

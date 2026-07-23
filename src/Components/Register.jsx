@@ -260,7 +260,7 @@ const Register = () => {
                 </div>
               </div>
 
-              <div className="mb-3">
+              {/* <div className="mb-3">
                 <label className="form-label">Alternate Number <span className="text-muted" style={{ fontSize: "0.8rem" }}>(optional)</span></label>
                 <div className="auth-field-wrap">
                   <span className="auth-icon"><Phone size={16} /></span>
@@ -273,7 +273,7 @@ const Register = () => {
                     onChange={handleChange}
                   />
                 </div>
-              </div>
+              </div> */}
 
               <div className="mb-3">
                 <label className="form-label">Time Zone</label>

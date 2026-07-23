@@ -1,27 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
-import { User, Key, Moon, LogOut, Mail } from "lucide-react";
+import { User, Key, LogOut, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getStoredUser, isEmailVerified } from "../utils/user";
 import "../styles/ProfileDropdown.css";
 
 const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [user, setUser] = useState(null);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    setUser(getStoredUser());
 
-    // Load dark mode preference
-    const savedDarkMode = localStorage.getItem("darkMode") === "true";
-    setDarkMode(savedDarkMode);
-    if (savedDarkMode) {
-      document.body.classList.add("dark-mode");
-    }
+    const handleUserUpdated = () => setUser(getStoredUser());
+    window.addEventListener("user-updated", handleUserUpdated);
+    return () => window.removeEventListener("user-updated", handleUserUpdated);
   }, []);
 
   // Close dropdown when clicking outside
@@ -51,17 +45,7 @@ const ProfileDropdown = () => {
     navigate("/verify-email");
   };
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem("darkMode", newDarkMode);
-    
-    if (newDarkMode) {
-      document.body.classList.add("dark-mode");
-    } else {
-      document.body.classList.remove("dark-mode");
-    }
-  };
+  const showVerifyEmail = user && !isEmailVerified(user);
 
   return (
     <div className="profile-dropdown-container" ref={dropdownRef}>
@@ -113,12 +97,15 @@ const ProfileDropdown = () => {
               <span>Change password</span>
             </button>
 
-            <button className="profile-menu-item"
-            onClick={handleVerifyEmail}
-            >
-              <Mail size={20} />
-              <span>Verify email</span>
-            </button>
+            {showVerifyEmail && (
+              <button
+                className="profile-menu-item"
+                onClick={handleVerifyEmail}
+              >
+                <Mail size={20} />
+                <span>Verify email</span>
+              </button>
+            )}
 
             {/* <div className="profile-menu-item dark-mode-toggle">
               <Moon size={20} />

@@ -309,7 +309,7 @@ const ForgotPassword = () => {
               style={{ maxWidth: "480px", width: "100%" }}
             >
               <img src="/images/logo-white.png" alt="Tax Filer" style={{ maxWidth: "180px", marginBottom: "2.5rem" }} />
-              <h1 className="fw-bold mb-4" style={{ fontSize: "2.8rem", lineHeight: 1.2 }}>
+              <h1 className="fw-bold text-white mb-4" style={{ fontSize: "2.8rem", lineHeight: 1.2 }}>
                 Forgot Password <span style={{ color: "#fbbf24" }}>?</span>
               </h1>
               <p className="mb-5 text-white-50" style={{ fontSize: "1.05rem" }}>
