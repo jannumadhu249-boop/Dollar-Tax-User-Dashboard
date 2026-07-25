@@ -44,4 +44,17 @@ export const URLS = {
     GetBankDetails : base_url + "v1/minimumTax/user/bankDetails/getBankDetails",
     UpdateBankDetails : base_url + "v1/minimumTax/user/bankDetails/updateBankDetails",
 
+    // Document Uploads
+    GetDocumentType : base_url + "v1/minimumTax/user/uploadDoc/getDocumentTypes",
+    GetDocuments : base_url + "v1/minimumTax/user/uploadDoc/getDocuments",
+    UploadDocuments : base_url + "v1/minimumTax/user/uploadDoc/uploadDocument",
+    GetByIdDouments : base_url + "v1/minimumTax/user/uploadDoc/getDocument/",
+    DeleteDocument : base_url + "v1/minimumTax/user/uploadDoc/deleteDocument/",
+
+    // Schedule Tax Note
+    GetScheduleTaxNote : base_url + "v1/minimumTax/user/scheduleTaxNote/getScheduleTaxNote",
+    GetTimeSlote : base_url + "v1/minimumTax/user/scheduleTaxNote/getTimeSlots",
+    ScheduleTaxNote : base_url + "v1/minimumTax/user/scheduleTaxNote/scheduleTaxNote",
+    
+
 }

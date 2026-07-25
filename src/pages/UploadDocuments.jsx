@@ -1,16 +1,95 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../Components/Sidebar";
 import Header from "../Components/Header";
 import Footer from "../Components/Footer";
-import { Upload as UploadIcon } from "lucide-react";
+import {
+  Upload as UploadIcon,
+  Eye,
+  Trash2,
+  Loader2,
+  FileText,
+  X,
+  FolderOpen,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { URLS } from "../url";
 import "../styles/Dashboard.css";
 
 const UploadDocuments = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showUploadForm, setShowUploadForm] = useState(false);
+
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedDocTypeId, setSelectedDocTypeId] = useState("");
+  const [documentTypes, setDocumentTypes] = useState([]);
+  const [documents, setDocuments] = useState([]);
+
+  const [loadingTypes, setLoadingTypes] = useState(false);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [viewingId, setViewingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  // Document viewer modal
+  const [viewModalDoc, setViewModalDoc] = useState(null);
+  const [viewModalUrl, setViewModalUrl] = useState("");
+
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
+  /* ── 1. Fetch Document Types ───────────────────────────────────── */
+  const fetchDocumentTypes = async () => {
+    setLoadingTypes(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(URLS.GetDocumentType, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setDocumentTypes(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching document types:", err);
+    } finally {
+      setLoadingTypes(false);
+    }
+  };
+
+  /* ── 2. Fetch User Documents ───────────────────────────────────── */
+  const fetchDocuments = async () => {
+    setLoadingDocs(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(URLS.GetDocuments, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setDocuments(data.data);
+      } else if (Array.isArray(data)) {
+        setDocuments(data);
+      } else if (Array.isArray(data.documents)) {
+        setDocuments(data.documents);
+      }
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
+  // Handle sidebar responsiveness
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth <= 768) {
@@ -20,20 +99,166 @@ const UploadDocuments = () => {
       }
     };
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Fetch document types and uploaded documents on mount
+  useEffect(() => {
+    fetchDocumentTypes();
+    fetchDocuments();
+  }, []);
+
+  /* ── File Selection Change ─────────────────────────────────────── */
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      if (error) setError("");
     }
+  };
+
+  /* ── 3. Upload Document ────────────────────────────────────────── */
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    if (!selectedDocTypeId) {
+      setError("Please select a document type.");
+      return;
+    }
+
+    if (!selectedFile) {
+      setError("Please select a document file to upload.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("document_type_id", selectedDocTypeId);
+      formData.append("document", selectedFile);
+
+      const res = await fetch(URLS.UploadDocuments, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const textErr = await res.text();
+        // console.error("Upload server response:", res.status, textErr);
+        data = {
+          success: false,
+          message: `Server error (${res.status}): ${textErr || "Upload failed."}`,
+        };
+      }
+
+      if (data.success) {
+        setSuccessMsg(data.message || "Document uploaded successfully!");
+        setSelectedFile(null);
+        setSelectedDocTypeId("");
+        setShowUploadForm(false);
+        fetchDocuments();
+      } else {
+        setError(data.message || "Failed to upload document.");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Network error while uploading document.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  /* ── 4. View Document in Modal ─────────────────────────────────── */
+  const handleViewDocument = (doc) => {
+    const filePath = doc.file_path || doc.url || doc.filePath || doc.path || doc.document;
+    if (!filePath) {
+      alert("Document file path not found.");
+      return;
+    }
+    const finalUrl = filePath.startsWith("http")
+      ? filePath
+      : `${URLS.ImageUrl}${filePath.startsWith("/") ? "" : "/"}${filePath}`;
+    setViewModalDoc(doc);
+    setViewModalUrl(finalUrl);
+  };
+
+  const closeModal = () => {
+    setViewModalDoc(null);
+    setViewModalUrl("");
+  };
+
+
+  /* ── 5. Delete Document by ID ─────────────────────────────────── */
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm("Are you sure you want to delete this document?")) {
+      return;
+    }
+    setDeletingId(docId);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${URLS.DeleteDocument}${docId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg(data.message || "Document deleted successfully!");
+        fetchDocuments();
+      } else {
+        setError(data.message || "Failed to delete document.");
+      }
+    } catch (err) {
+      console.error("Delete document error:", err);
+      setError("Network error while deleting document.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Helper to extract display name for document type from API object structure
+  const getDocTypeName = (doc) => {
+    if (doc.document_type_id && typeof doc.document_type_id === "object" && doc.document_type_id.name) {
+      return doc.document_type_id.name;
+    }
+    if (typeof doc.document_type_id === "string") {
+      const match = documentTypes.find((t) => t._id === doc.document_type_id);
+      if (match) return match.name;
+    }
+    return doc.document_type_name || doc.document_type || doc.typeName || "Tax Document";
+  };
+
+  // Helper to extract filename from API object structure
+  const getFileName = (doc) => {
+    return (
+      doc.original_name ||
+      doc.file_name ||
+      doc.document_name ||
+      doc.name ||
+      doc.document ||
+      "Document"
+    );
   };
 
   return (
     <div className="dashboard-container">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
       <main className="main-content">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -44,74 +269,514 @@ const UploadDocuments = () => {
           <span className="breadcrumb-current">Upload Tax Documents</span>
         </div>
 
-        {/* Upload Content */}
-        <div className="form-container">
-          <div className="form-card">
-            <h3 className="form-title">Upload Documents</h3>
-            <p className="form-description">
-              Please upload your tax related documents.
-            </p>
+        <div className="form-container" style={{ width: "100%", padding: "0" }}>
 
-            <div className="upload-form">
-              <div className="form-group">
-                <label>Document Type</label>
-                <select className="form-control">
-                  <option>Select Document Type</option>
-                  <option>W-2 Form</option>
-                  <option>1099-MISC</option>
-                  <option>1099-INT</option>
-                  <option>1099-DIV</option>
-                  <option>1099-B</option>
-                  <option>1099-R</option>
-                  <option>1098 Mortgage Interest</option>
-                  <option>1098-T Tuition</option>
-                  <option>1098-E Student Loan Interest</option>
-                  <option>Form 8606 - IRA</option>
-                  <option>Form 1095-A Health Insurance</option>
-                  <option>K-1 Form</option>
-                  <option>Schedule C</option>
-                  <option>Other Income Documents</option>
-                  <option>Rental Property Documents</option>
-                  <option>Investment Documents</option>
-                  <option>Foreign Income Documents</option>
-                  <option>Other</option>
-                </select>
+          {/* ── 1. Upload Form Collapsible Card ──────────────────────────────── */}
+          {showUploadForm && (
+            <div
+              className="form-card"
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "12px",
+                padding: "1.75rem 2rem",
+                marginBottom: "1.5rem",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justify: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                <h3 className="form-title" style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>
+                  Upload New Document
+                </h3>
+                {/* <button
+                  type="button"
+                  onClick={() => {
+                    setShowUploadForm(false);
+                    setError("");
+                    setSuccessMsg("");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#64748b",
+                    cursor: "pointer",
+                    padding: "0.25rem",
+                  }}
+                >
+                  <X size={20} />
+                </button> */}
               </div>
 
-              <div className="form-group">
-                <label>Document File</label>
-                <div className="file-upload-wrapper">
-                  <input
-                    type="file"
-                    id="fileUpload"
-                    className="file-input"
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  />
-                  <label htmlFor="fileUpload" className="file-upload-label">
-                    <span className="file-upload-button">Choose File</span>
-                    <span className="file-upload-text">
-                      {selectedFile ? selectedFile.name : "No file chosen"}
-                    </span>
-                  </label>
+              {/* Status Alerts */}
+              {successMsg && (
+                <div className="alert alert-success py-2 px-3 mb-3" style={{ fontSize: "0.875rem", borderRadius: "8px" }}>
+                  {successMsg}
                 </div>
-                <p className="file-note">Note: Please upload files size below 20Mb</p>
-              </div>
+              )}
+              {error && (
+                <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.875rem", borderRadius: "8px" }}>
+                  {error}
+                </div>
+              )}
 
-              {/* Upload Button */}
-              <div className="upload-actions">
-                <button className="btn-upload">
-                  <UploadIcon size={18} />
-                  Upload Now
-                </button>
-              </div>
+              <form onSubmit={handleUpload}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                    gap: "1.5rem",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  {/* Document Type Dropdown */}
+                  <div className="form-group">
+                    <label style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.5rem", display: "block" }}>
+                      Document Type <span style={{ color: "#e63946" }}>*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={selectedDocTypeId}
+                      onChange={(e) => {
+                        setSelectedDocTypeId(e.target.value);
+                        if (error) setError("");
+                      }}
+                      disabled={loadingTypes || uploading}
+                    >
+                      <option value="">
+                        {loadingTypes ? "Loading document types..." : "-- Select Document Type --"}
+                      </option>
+                      {documentTypes.map((type) => (
+                        <option key={type._id} value={type._id}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Document File Input */}
+                  <div className="form-group">
+                    <label style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.5rem", display: "block" }}>
+                      Document File <span style={{ color: "#e63946" }}>*</span>
+                    </label>
+                    <div className="file-upload-wrapper">
+                      <input
+                        type="file"
+                        id="fileUpload"
+                        ref={fileInputRef}
+                        className="file-input"
+                        onChange={handleFileChange}
+                        accept=".pdf,.doc,.docx"
+                        disabled={uploading}
+                      />
+                      <label htmlFor="fileUpload" className="file-upload-label">
+                        <span className="file-upload-button">Choose File</span>
+                        <span className="file-upload-text">
+                          {selectedFile ? selectedFile.name : "No file chosen"}
+                        </span>
+                      </label>
+                    </div>
+                    <p className="file-note" style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "0.4rem" }}>
+                      Note: Please upload files size below 20MB (.pdf, .doc)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Form Buttons */}
+                <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowUploadForm(false)}
+                    style={{
+                      padding: "0.55rem 1.25rem",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      border: "1px solid #cbd5e1",
+                      backgroundColor: "#f8fafc",
+                      color: "#475569",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-upload"
+                    disabled={uploading}
+                    style={{
+                      padding: "0.55rem 1.5rem",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      cursor: uploading ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <UploadIcon size={16} />
+                        Upload Now
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
+          )}
+
+          {/* ── 2. Documents List Card (FIRST) ────────────────────────────────── */}
+          <div
+            className="form-card"
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "12px",
+              padding: "1.75rem 2rem",
+              boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
+              border: "1px solid #e2e8f0",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justify: "space-between",
+                alignItems: "center",
+                marginBottom: "1.5rem",
+                width: "100%",
+              }}
+            >
+              <h3 className="form-title" style={{ margin: 0, fontSize: "1.35rem", fontWeight: 700 }}>
+                Uploaded Documents ({documents.length})
+              </h3>
+              <button
+                onClick={() => {
+                  setShowUploadForm((prev) => !prev);
+                  setError("");
+                  setSuccessMsg("");
+                }}
+                className="btn-upload"
+                style={{
+                  padding: "0.55rem 1.25rem",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  borderRadius: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  cursor: "pointer",
+                  marginLeft: "auto",
+                }}
+              >
+                {showUploadForm ? (
+                  <>
+                    <X size={16} /> Close Upload
+                  </>
+                ) : (
+                  <>
+                    <UploadIcon size={16} /> + Upload Document
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* General Status Alerts when Form is Closed */}
+            {!showUploadForm && successMsg && (
+              <div
+                className="alert alert-success py-2 px-3 mb-3 d-flex align-items-center justify-content-between"
+                style={{ fontSize: "0.875rem", borderRadius: "8px" }}
+              >
+                <span>{successMsg}</span>
+                <X size={16} style={{ cursor: "pointer" }} onClick={() => setSuccessMsg("")} />
+              </div>
+            )}
+            {!showUploadForm && error && (
+              <div
+                className="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center justify-content-between"
+                style={{ fontSize: "0.875rem", borderRadius: "8px" }}
+              >
+                <span>{error}</span>
+                <X size={16} style={{ cursor: "pointer" }} onClick={() => setError("")} />
+              </div>
+            )}
+
+            {loadingDocs ? (
+              <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#64748b" }}>
+                <Loader2 size={28} style={{ animation: "spin 1s linear infinite", marginBottom: "0.75rem", color: "#2563eb" }} />
+                <p style={{ margin: 0, fontSize: "0.9rem" }}>Loading documents...</p>
+              </div>
+            ) : documents.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "3.5rem 1rem",
+                  backgroundColor: "#f8fafc",
+                  borderRadius: "10px",
+                  border: "2px dashed #cbd5e1",
+                }}
+              >
+                <FolderOpen size={40} style={{ color: "#94a3b8", marginBottom: "0.5rem" }} />
+                <p style={{ margin: 0, color: "#64748b", fontSize: "0.95rem" }}>
+                  No documents uploaded yet. Click "+ Upload Document" above to get started.
+                </p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#f8fafc", borderBottom: "2px solid #e2e8f0", textAlign: "left" }}>
+                      <th style={{ padding: "0.85rem 1rem", color: "#475569", fontWeight: 600 }}>S.No</th>
+                      <th style={{ padding: "0.85rem 1rem", color: "#475569", fontWeight: 600 }}>Document Type</th>
+                      <th style={{ padding: "0.85rem 1rem", color: "#475569", fontWeight: 600 }}>File Name</th>
+                      <th style={{ padding: "0.85rem 1rem", color: "#475569", fontWeight: 600 }}>Upload Date</th>
+                      <th style={{ padding: "0.85rem 1rem", color: "#475569", fontWeight: 600, textAlign: "center" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.map((doc, idx) => (
+                      <tr key={doc._id || idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "0.85rem 1rem", color: "#64748b" }}>{idx + 1}</td>
+                        <td style={{ padding: "0.85rem 1rem", fontWeight: 500 }}>
+                          <span
+                            style={{
+                              backgroundColor: "#eff6ff",
+                              color: "#1d4ed8",
+                              fontWeight: 600,
+                              fontSize: "0.82rem",
+                              padding: "0.3rem 0.75rem",
+                              borderRadius: "20px",
+                            }}
+                          >
+                            {getDocTypeName(doc)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.85rem 1rem", color: "#0f172a", fontWeight: 500 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <FileText size={16} style={{ color: "#2563eb" }} />
+                            <span>{getFileName(doc)}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "0.85rem 1rem", color: "#64748b", fontSize: "0.85rem" }}>
+                          {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : "N/A"}
+                        </td>
+                        <td style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
+                          <div style={{ display: "inline-flex", gap: "0.5rem", justifyContent: "center" }}>
+                            <button
+                              onClick={() => handleViewDocument(doc)}
+                              title="View Document"
+                              style={{
+                                padding: "0.35rem 0.7rem",
+                                fontSize: "0.8rem",
+                                borderRadius: "6px",
+                                border: "1px solid #bfdbfe",
+                                backgroundColor: "#eff6ff",
+                                color: "#1d4ed8",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.3rem",
+                              }}
+                            >
+                              <Eye size={14} />
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDocument(doc._id)}
+                              disabled={deletingId === doc._id}
+                              title="Delete Document"
+                              style={{
+                                padding: "0.35rem 0.7rem",
+                                fontSize: "0.8rem",
+                                borderRadius: "6px",
+                                border: "1px solid #fecaca",
+                                backgroundColor: "#fef2f2",
+                                color: "#dc2626",
+                                cursor: deletingId === doc._id ? "not-allowed" : "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.3rem",
+                              }}
+                            >
+                              {deletingId === doc._id ? (
+                                <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer */}
         <Footer />
       </main>
+
+      {/* ── Document Viewer Modal ────────────────────────────────────── */}
+      {viewModalDoc && (
+        <div
+          onClick={closeModal}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: "14px",
+              width: "90%",
+              maxWidth: "860px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "0 25px 60px rgba(0,0,0,0.35)",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "1rem 1.5rem",
+                borderBottom: "1px solid #e2e8f0",
+                backgroundColor: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <FileText size={18} style={{ color: "#2563eb" }} />
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: "#1e293b",
+                    fontSize: "0.95rem",
+                    maxWidth: "600px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {getFileName(viewModalDoc)}
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <a
+                  href={viewModalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    padding: "0.35rem 0.85rem",
+                    fontSize: "0.8rem",
+                    borderRadius: "6px",
+                    border: "1px solid #bfdbfe",
+                    backgroundColor: "#eff6ff",
+                    color: "#1d4ed8",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Open in New Tab
+                </a>
+                <button
+                  onClick={closeModal}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#64748b",
+                    padding: "0.25rem",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ flex: 1, overflow: "auto", backgroundColor: "#f1f5f9" }}>
+              {viewModalDoc.mime_type &&
+                (viewModalDoc.mime_type.includes("image") ||
+                  /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(viewModalUrl)) ? (
+                /* Image viewer */
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "400px",
+                    padding: "1.5rem",
+                  }}
+                >
+                  <img
+                    src={viewModalUrl}
+                    alt={getFileName(viewModalDoc)}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "70vh",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "block";
+                    }}
+                  />
+                  <p
+                    style={{
+                      display: "none",
+                      color: "#64748b",
+                      textAlign: "center",
+                      padding: "2rem",
+                    }}
+                  >
+                    Unable to load image. Please use "Open in New Tab".
+                  </p>
+                </div>
+              ) : (
+                /* PDF / other — iframe viewer */
+                <iframe
+                  src={viewModalUrl}
+                  title={getFileName(viewModalDoc)}
+                  style={{
+                    width: "100%",
+                    height: "70vh",
+                    border: "none",
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
