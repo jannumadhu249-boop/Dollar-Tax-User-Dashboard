@@ -55,6 +55,9 @@ export const URLS = {
     GetScheduleTaxNote : base_url + "v1/minimumTax/user/scheduleTaxNote/getScheduleTaxNote",
     GetTimeSlote : base_url + "v1/minimumTax/user/scheduleTaxNote/getTimeSlots",
     ScheduleTaxNote : base_url + "v1/minimumTax/user/scheduleTaxNote/scheduleTaxNote",
+
+    // Download Tax Return
+    GetDownloadTaxReturn : base_url + "v1/minimumTax/user/taxReturns/getDownloadTaxReturns",
     
 
 }
