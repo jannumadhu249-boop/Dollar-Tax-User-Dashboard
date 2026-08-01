@@ -197,7 +197,7 @@ const ScheduleTaxConsultation = () => {
           <span className="breadcrumb-current">Schedule Tax Consultation</span>
         </div>
 
-        <div className="form-container" style={{ width: "100%", padding: "0" }}>
+        <div className="form-container" style={{ width: "100%", padding: "0 2rem" }}>
 
           {/* ── Collapsible Schedule Form Card ───────────────────────────── */}
           {showForm && (

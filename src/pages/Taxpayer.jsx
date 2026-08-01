@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../Components/Sidebar";
 import Header from "../Components/Header";
 import Footer from "../Components/Footer";
@@ -7,17 +7,24 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from "react-router-dom";
 import { URLS } from "../url";
 import "../styles/Dashboard.css";
+import { CheckCircle, XCircle, X } from "lucide-react";
 
 const Taxpayer = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dateOfBirth, setDateOfBirth] = useState(null);
   const [firstEntryDate, setFirstEntryDate] = useState(null);
+  const [marriageDate, setMarriageDate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const navigate = useNavigate();
   const today = new Date();
+
+  // Referral states
+  const [referred, setReferred] = useState("no");
+  const [referFullName, setReferFullName] = useState("");
+  const [referEmail, setReferEmail] = useState("");
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -38,7 +45,31 @@ const Taxpayer = () => {
     zipcode: "",
   });
 
-  // Handle initial sidebar state based on screen size
+  // ─── Auto‑dismiss alerts ─────────────────────────────────────────
+  const alertTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    // Clear any existing timer
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+    }
+
+    // If there's a message, set a timer to clear it after 5 seconds
+    if (error || successMsg) {
+      alertTimeoutRef.current = setTimeout(() => {
+        setError("");
+        setSuccessMsg("");
+      }, 5000); // 5 seconds
+    }
+
+    return () => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+    };
+  }, [error, successMsg]);
+
+  // ─── Sidebar responsiveness ─────────────────────────────────────
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth <= 768) {
@@ -47,13 +78,12 @@ const Taxpayer = () => {
         setSidebarOpen(true);
       }
     };
-
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Fetch taxpayer details on mount
+  // ─── Fetch taxpayer data on mount ──────────────────────────────
   useEffect(() => {
     fetchTaxpayerData();
   }, []);
@@ -72,6 +102,7 @@ const Taxpayer = () => {
       });
 
       const resData = await response.json();
+
       if (resData.success && resData.data) {
         const item = resData.data;
         setFormData({
@@ -93,14 +124,21 @@ const Taxpayer = () => {
           zipcode: item.zipcode || "",
         });
 
-        if (item.date_of_birth) {
-          setDateOfBirth(new Date(item.date_of_birth));
-        }
-        if (item.first_entry_date_into_usa) {
+        if (item.date_of_birth) setDateOfBirth(new Date(item.date_of_birth));
+        if (item.first_entry_date_into_usa)
           setFirstEntryDate(new Date(item.first_entry_date_into_usa));
-        }
+        if (item.marriage_date) setMarriageDate(new Date(item.marriage_date));
+
+        if (item.referred !== undefined) setReferred(item.referred ? "yes" : "no");
+        if (item.refer_full_name) setReferFullName(item.refer_full_name);
+        if (item.refer_email) setReferEmail(item.refer_email);
       } else {
-        setError(resData.message || "Failed to fetch taxpayer details.");
+        // Do not show error when no data found – treat as new profile
+        if (resData.message && resData.message.toLowerCase().includes("not found")) {
+          setError("");
+        } else {
+          setError(resData.message || "Failed to fetch taxpayer details.");
+        }
       }
     } catch (err) {
       setError("Network error fetching taxpayer details.");
@@ -109,9 +147,25 @@ const Taxpayer = () => {
     }
   };
 
+  // ─── Handlers ────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (error) setError("");
+    if (successMsg) setSuccessMsg("");
+  };
+
+  // SSN/TIN formatting: only digits, max 9, format as XXX-XX-XXXX
+  const handleSsnChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, "");
+    let formatted = raw;
+    if (raw.length > 3 && raw.length <= 5) {
+      formatted = raw.slice(0, 3) + "-" + raw.slice(3);
+    } else if (raw.length > 5) {
+      formatted = raw.slice(0, 3) + "-" + raw.slice(3, 5) + "-" + raw.slice(5, 9);
+    }
+    if (formatted.length > 11) formatted = formatted.slice(0, 11);
+    setFormData((prev) => ({ ...prev, ssn_tin: formatted }));
     if (error) setError("");
     if (successMsg) setSuccessMsg("");
   };
@@ -125,6 +179,7 @@ const Taxpayer = () => {
     return `${year}-${month}-${day}`;
   };
 
+  // ─── Submit ──────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -136,7 +191,7 @@ const Taxpayer = () => {
       middle_name: formData.middle_name,
       last_name: formData.last_name,
       gender: formData.gender,
-      ssn_tin: formData.ssn_tin,
+      ssn_tin: formData.ssn_tin.replace(/-/g, ""),
       date_of_birth: formatDate(dateOfBirth),
       occupation: formData.occupation,
       first_entry_date_into_usa: formatDate(firstEntryDate),
@@ -150,6 +205,10 @@ const Taxpayer = () => {
       city: formData.city,
       state: formData.state,
       zipcode: formData.zipcode,
+      marriage_date: formatDate(marriageDate),
+      referred: referred === "yes",
+      refer_full_name: referFullName,
+      refer_email: referEmail,
     };
 
     try {
@@ -176,28 +235,74 @@ const Taxpayer = () => {
     }
   };
 
-  const visaOptions = ["NOT AVAILABLE", "H1B", "L1", "F1", "F1 OPT", "OPT", "J1"];
-  const filingOptions = ["Single", "Married Filing Joint", "Married Filing Jointly", "Married Filing Separately", "Head of Household"];
-  const timezoneOptions = ["MST", "EST", "PST", "CST", "IST"];
-  const stateOptions = ["California", "New York", "Texas", "Florida", "Telangana", "Washington", "Illinois"];
+  // ─── Conditional rendering – marriage date ─────────────────────
+  const showMarriageDate = [
+    "Married Filing Separate",
+    "Married Filing Joint",
+    "Qualifying Widow/ER",
+  ].includes(formData.filing_status);
 
+  // ─── Options ────────────────────────────────────────────────────
+  const visaOptions = [
+    "Select Visa Type",
+    "NOT AVAILABLE",
+    "US CITIZEN",
+    "B1",
+    "B2",
+    "H1 A",
+    "H1 B",
+    "H4",
+    "L1 A",
+    "L1 B",
+    "L2",
+    "F1",
+    "F1 OPT",
+    "F1 CPT",
+    "J",
+    "M",
+    "Q",
+    "EAD",
+    "GREEN CARD",
+  ];
+  const filingOptions = [
+    "Select",
+    "Single",
+    "Married Filing Joint",
+    "Married Filing Separate",
+    "Head of Household",
+    "Qualifying Widow/ER",
+  ];
+  const timezoneOptions = [
+    "Select Time Zone",
+    "MST",
+    "EST",
+    "PST",
+    "CST",
+    "IST",
+  ];
+  const stateOptions = [
+    "Select State",
+    "California",
+    "New York",
+    "Texas",
+    "Florida",
+    "Telangana",
+    "Washington",
+    "Illinois",
+  ];
+
+  // ─── Render ─────────────────────────────────────────────────────
   return (
     <div className="dashboard-container">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {/* Sidebar Overlay for Mobile */}
       {sidebarOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       <main className="main-content">
-        {/* Top Navigation */}
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        {/* Breadcrumb */}
         <div className="breadcrumb">
           <a href="/dashboard">Home</a>
           <span className="breadcrumb-separator">›</span>
@@ -206,26 +311,76 @@ const Taxpayer = () => {
           <span className="breadcrumb-current">Taxpayer</span>
         </div>
 
-        {/* Form Content */}
         <div className="form-container">
           <div className="form-card">
             <h3 className="form-title">Tax Payer Details</h3>
 
-            {/* Alert Messages */}
+            {/* ─── Advanced Alerts ─── */}
             {error && (
               <div
-                className="alert alert-danger py-2 px-3 mb-3"
-                style={{ fontSize: "0.87rem", borderRadius: "8px" }}
+                className="alert alert-danger d-flex align-items-center justify-content-between py-2 px-3 mb-3"
+                style={{
+                  fontSize: "0.87rem",
+                  borderRadius: "8px",
+                  borderLeft: "4px solid #dc3545",
+                  backgroundColor: "#fff5f5",
+                  color: "#842029",
+                }}
               >
-                {error}
+                <div className="d-flex align-items-center">
+                  <XCircle size={18} className="me-2" style={{ color: "#dc3545" }} />
+                  <span>{error}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: "1.2rem",
+                    lineHeight: 1,
+                    cursor: "pointer",
+                    color: "#842029",
+                  }}
+                  onClick={() => setError("")}
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
               </div>
             )}
+
             {successMsg && (
               <div
-                className="alert alert-success py-2 px-3 mb-3"
-                style={{ fontSize: "0.87rem", borderRadius: "8px" }}
+                className="alert alert-success d-flex align-items-center justify-content-between py-2 px-3 mb-3"
+                style={{
+                  fontSize: "0.87rem",
+                  borderRadius: "8px",
+                  borderLeft: "4px solid #198754",
+                  backgroundColor: "#f0fff4",
+                  color: "#0a5c36",
+                }}
               >
-                {successMsg}
+                <div className="d-flex align-items-center">
+                  <CheckCircle size={18} className="me-2" style={{ color: "#198754" }} />
+                  <span>{successMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: "1.2rem",
+                    lineHeight: 1,
+                    cursor: "pointer",
+                    color: "#0a5c36",
+                  }}
+                  onClick={() => setSuccessMsg("")}
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
               </div>
             )}
 
@@ -234,46 +389,48 @@ const Taxpayer = () => {
                 <div className="spinner-border text-primary" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
-                <p className="mt-2 text-muted" style={{ fontSize: "0.9rem" }}>Fetching Taxpayer Details...</p>
+                <p className="mt-2 text-muted" style={{ fontSize: "0.9rem" }}>
+                  Fetching Taxpayer Details...
+                </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit}>
+                {/* Personal Information */}
                 <div className="form-grid">
-                  {/* First Row */}
                   <div className="form-group">
                     <label>First Name</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Enter First Name"
                       name="first_name"
                       value={formData.first_name}
                       onChange={handleChange}
                     />
                   </div>
-
                   <div className="form-group">
                     <label>Middle Name</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Enter Middle Name"
                       name="middle_name"
                       value={formData.middle_name}
                       onChange={handleChange}
                     />
                   </div>
-
                   <div className="form-group">
                     <label>Last Name</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Enter Last Name"
                       name="last_name"
                       value={formData.last_name}
                       onChange={handleChange}
                     />
                   </div>
 
-                  {/* Second Row */}
                   <div className="form-group">
                     <label>Gender</label>
                     <div className="radio-group">
@@ -307,7 +464,9 @@ const Taxpayer = () => {
                       className="form-control"
                       name="ssn_tin"
                       value={formData.ssn_tin}
-                      onChange={handleChange}
+                      onChange={handleSsnChange}
+                      placeholder="XXX-XX-XXXX"
+                      maxLength="11"
                     />
                   </div>
 
@@ -325,16 +484,17 @@ const Taxpayer = () => {
                       showMonthDropdown
                       showYearDropdown
                       dropdownMode="select"
+                      placeholderText="Enter Date of Birth"
                       maxDate={today}
                     />
                   </div>
 
-                  {/* Third Row */}
                   <div className="form-group">
                     <label>Occupation</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Occupation In USA"
                       name="occupation"
                       value={formData.occupation}
                       onChange={handleChange}
@@ -355,6 +515,7 @@ const Taxpayer = () => {
                       showMonthDropdown
                       showYearDropdown
                       dropdownMode="select"
+                      placeholderText="Enter First Entry Date"
                       maxDate={today}
                     />
                   </div>
@@ -367,9 +528,12 @@ const Taxpayer = () => {
                       value={formData.visa_type}
                       onChange={handleChange}
                     >
-                      {!visaOptions.includes(formData.visa_type) && formData.visa_type && (
-                        <option value={formData.visa_type}>{formData.visa_type}</option>
-                      )}
+                      {!visaOptions.includes(formData.visa_type) &&
+                        formData.visa_type && (
+                          <option value={formData.visa_type}>
+                            {formData.visa_type}
+                          </option>
+                        )}
                       {visaOptions.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
@@ -378,7 +542,6 @@ const Taxpayer = () => {
                     </select>
                   </div>
 
-                  {/* Fourth Row */}
                   <div className="form-group">
                     <label>Filing Status</label>
                     <select
@@ -387,9 +550,12 @@ const Taxpayer = () => {
                       value={formData.filing_status}
                       onChange={handleChange}
                     >
-                      {!filingOptions.includes(formData.filing_status) && formData.filing_status && (
-                        <option value={formData.filing_status}>{formData.filing_status}</option>
-                      )}
+                      {!filingOptions.includes(formData.filing_status) &&
+                        formData.filing_status && (
+                          <option value={formData.filing_status}>
+                            {formData.filing_status}
+                          </option>
+                        )}
                       {filingOptions.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
@@ -397,6 +563,28 @@ const Taxpayer = () => {
                       ))}
                     </select>
                   </div>
+
+                  {/* Conditional Marriage Date field */}
+                  {showMarriageDate && (
+                    <div className="form-group">
+                      <label>Date of Marriage</label>
+                      <DatePicker
+                        selected={marriageDate}
+                        onChange={(date) => {
+                          setMarriageDate(date);
+                          if (error) setError("");
+                          if (successMsg) setSuccessMsg("");
+                        }}
+                        dateFormat="MM/dd/yyyy"
+                        className="form-control"
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        placeholderText="Enter Date of Marriage"
+                        maxDate={today}
+                      />
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label>Timezone</label>
@@ -406,9 +594,12 @@ const Taxpayer = () => {
                       value={formData.timezone}
                       onChange={handleChange}
                     >
-                      {!timezoneOptions.includes(formData.timezone) && formData.timezone && (
-                        <option value={formData.timezone}>{formData.timezone}</option>
-                      )}
+                      {!timezoneOptions.includes(formData.timezone) &&
+                        formData.timezone && (
+                          <option value={formData.timezone}>
+                            {formData.timezone}
+                          </option>
+                        )}
                       {timezoneOptions.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
@@ -418,68 +609,66 @@ const Taxpayer = () => {
                   </div>
                 </div>
 
-                {/* Contact Details Section */}
+                {/* Contact Details */}
                 <h3 className="form-title mt-4">Contact Details</h3>
-
                 <div className="form-grid">
-                  {/* First Row */}
                   <div className="form-group">
                     <label>Contact Number</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Enter Phone Number"
                       name="contact_number"
                       value={formData.contact_number}
                       onChange={handleChange}
                     />
                   </div>
-
                   <div className="form-group">
                     <label>Alternate Number</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Enter Alternate Number"
                       name="alternate_number"
                       value={formData.alternate_number}
                       onChange={handleChange}
                     />
                   </div>
-
                   <div className="form-group">
                     <label>Email</label>
                     <input
                       type="email"
                       className="form-control"
+                      placeholder="Enter Email Address"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                     />
                   </div>
 
-                  {/* Second Row - Mailing Address */}
                   <div className="form-group full-width">
                     <label>Mailing Address</label>
                     <textarea
                       className="form-control"
                       rows="3"
+                      placeholder="Enter Mailing Address"
                       name="mailing_address"
                       value={formData.mailing_address}
                       onChange={handleChange}
                     />
                   </div>
 
-                  {/* Third Row */}
                   <div className="form-group">
                     <label>City</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Enter City"
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
                     />
                   </div>
-
                   <div className="form-group">
                     <label>State</label>
                     <select
@@ -488,9 +677,12 @@ const Taxpayer = () => {
                       value={formData.state}
                       onChange={handleChange}
                     >
-                      {!stateOptions.includes(formData.state) && formData.state && (
-                        <option value={formData.state}>{formData.state}</option>
-                      )}
+                      {!stateOptions.includes(formData.state) &&
+                        formData.state && (
+                          <option value={formData.state}>
+                            {formData.state}
+                          </option>
+                        )}
                       {stateOptions.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
@@ -498,7 +690,6 @@ const Taxpayer = () => {
                       ))}
                     </select>
                   </div>
-
                   <div className="form-group">
                     <label>Zip Code</label>
                     <input
@@ -511,12 +702,92 @@ const Taxpayer = () => {
                   </div>
                 </div>
 
+                {/* Referral Section */}
+                <h3 className="form-title mt-4">Referral Information</h3>
+                <div className="form-grid">
+                  <div className="form-group full-width">
+                    <label>Have you been referred?</label>
+                    <div
+                      className="radio-group"
+                      style={{ display: "flex", gap: "1.5rem", marginTop: "0.25rem" }}
+                    >
+                      <label className="radio-label">
+                        <input
+                          type="radio"
+                          name="referred"
+                          value="yes"
+                          checked={referred === "yes"}
+                          onChange={() => {
+                            setReferred("yes");
+                            if (error) setError("");
+                            if (successMsg) setSuccessMsg("");
+                          }}
+                        />
+                        <span>Yes</span>
+                      </label>
+                      <label className="radio-label">
+                        <input
+                          type="radio"
+                          name="referred"
+                          value="no"
+                          checked={referred === "no"}
+                          onChange={() => {
+                            setReferred("no");
+                            setReferFullName("");
+                            setReferEmail("");
+                            if (error) setError("");
+                            if (successMsg) setSuccessMsg("");
+                          }}
+                        />
+                        <span>No</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {referred === "yes" && (
+                    <>
+                      <div className="form-group">
+                        <label>Full Name</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Enter Referred Name"
+                          value={referFullName}
+                          onChange={(e) => {
+                            setReferFullName(e.target.value);
+                            if (error) setError("");
+                            if (successMsg) setSuccessMsg("");
+                          }}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Referred Email</label>
+                        <input
+                          type="email"
+                          className="form-control"
+                          placeholder="Enter Referred Email Address"
+                          value={referEmail}
+                          onChange={(e) => {
+                            setReferEmail(e.target.value);
+                            if (error) setError("");
+                            if (successMsg) setSuccessMsg("");
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 {/* Save Button */}
                 <div className="form-actions">
                   <button type="submit" className="btn-save" disabled={loading}>
                     {loading ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
                         Saving...
                       </>
                     ) : (
@@ -529,7 +800,6 @@ const Taxpayer = () => {
           </div>
         </div>
 
-        {/* Footer */}
         <Footer />
       </main>
     </div>
@@ -537,4 +807,3 @@ const Taxpayer = () => {
 };
 
 export default Taxpayer;
-

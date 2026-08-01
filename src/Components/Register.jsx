@@ -33,7 +33,7 @@ const Register = () => {
     e.preventDefault();
     setError("");
 
-    // Basic validation
+    // ─── Validations ──────────────────────────────────────────────────
     if (!formData.first_name.trim() || !formData.last_name.trim()) {
       setError("First name and last name are required.");
       return;
@@ -46,8 +46,18 @@ const Register = () => {
       setError("Phone number is required.");
       return;
     }
+    // Phone number must be exactly 10 digits
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(formData.contact_number.trim())) {
+      setError("Phone number must be exactly 10 digits.");
+      return;
+    }
     if (!formData.password) {
       setError("Password is required.");
+      return;
+    }
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
     if (!formData.terms) {
@@ -85,7 +95,6 @@ const Register = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Store user info in localStorage
         localStorage.setItem(
           "user",
           JSON.stringify({
@@ -112,10 +121,10 @@ const Register = () => {
   };
 
   return (
-    <div className="container-fluid p-0 min-vh-100 d-flex align-items-stretch" style={{ overflowX: "hidden", backgroundColor: "#f3f4f6" }}>
-      <div className="row g-0 w-100 min-vh-100">
+    <div className="container-fluid p-0 d-flex align-items-stretch" style={{ height: "100vh", overflowX: "hidden", backgroundColor: "#f3f4f6" }}>
+      <div className="row g-0 w-100 h-100">
         {/* Left Side */}
-        <div className="col-lg-7 p-0 d-none d-lg-flex flex-column text-white position-relative" style={{ minHeight: "100vh" }}>
+        <div className="col-lg-7 p-0 d-none d-lg-flex flex-column text-white position-relative h-100">
           <div
             className="h-100 d-flex flex-column justify-content-center align-items-center text-white text-center p-5 position-relative"
             style={{
@@ -125,30 +134,25 @@ const Register = () => {
               flex: 1,
             }}
           >
-            {/* Dark overlay */}
             <div
               className="position-absolute top-0 start-0 w-100 h-100"
               style={{
                 background: "linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 27, 75, 0.88) 100%)",
               }}
             />
-
-            {/* Centered content */}
-            <div className="position-relative d-flex flex-column align-items-center" style={{ maxWidth: "480px", width: "100%" }}>
+            <div className="position-relative d-flex flex-column align-items-center" style={{ maxWidth: "420px", width: "100%" }}>
               <img
                 src="/images/logo-white.png"
                 alt="Tax Filer"
-                style={{ maxWidth: "180px", marginBottom: "2.5rem" }}
+                style={{ maxWidth: "180px", marginBottom: "1.5rem" }}
               />
-
-              <h1 className="fw-bold text-white mb-4" style={{ fontSize: "2.8rem", lineHeight: 1.2 }}>
+              <h1 className="fw-bold text-white mb-4" style={{ fontSize: "2.2rem", lineHeight: 1.2 }}>
                 Join Us <span style={{ color: "#fbbf24" }}>!</span>
               </h1>
-              <p className="mb-5 text-white-50" style={{ fontSize: "1.05rem" }}>
+              <p className="mb-5 text-white-50" style={{ fontSize: "0.95rem" }}>
                 Start your tax journey — Secure &amp; Free
               </p>
-
-              <div className="w-100" style={{ maxWidth: "340px" }}>
+              <div className="w-100" style={{ maxWidth: "300px" }}>
                 {[
                   "FREE Federal Tax Return",
                   "Free Tax Estimates",
@@ -170,14 +174,13 @@ const Register = () => {
         </div>
 
         {/* Right Side */}
-        <div className="col-lg-5 bg-white d-flex align-items-center">
-          <div className="w-100 p-4 p-lg-5">
-            <h3 className="text-center mb-1 fw-bold" style={{ color: "#1e1b4b", fontSize: "1.6rem" }}>Create Account</h3>
+        <div className="col-lg-5 bg-white d-flex align-items-center h-100 overflow-hidden">
+          <div className="w-100 p-4 p-lg-5 overflow-auto">
+            <h3 className="text-center mb-1 fw-bold" style={{ color: "#1e1b4b", fontSize: "1.4rem" }}>Create Account</h3>
             <p className="text-center text-muted mb-4" style={{ fontSize: "0.88rem" }}>Fill in your details to get started</p>
 
-            {/* Error Alert */}
             {error && (
-              <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
+              <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.8rem", borderRadius: "8px" }}>
                 {error}
               </div>
             )}
@@ -186,7 +189,9 @@ const Register = () => {
               {/* First Name & Last Name */}
               <div className="row g-2 mb-3">
                 <div className="col-6">
-                  <label className="form-label">First Name</label>
+                  <label className="form-label">
+                    First Name <span style={{ color: "#e63946" }}>*</span>
+                  </label>
                   <div className="auth-field-wrap">
                     <span className="auth-icon"><User size={16} /></span>
                     <input
@@ -201,7 +206,9 @@ const Register = () => {
                   </div>
                 </div>
                 <div className="col-6">
-                  <label className="form-label">Last Name</label>
+                  <label className="form-label">
+                    Last Name <span style={{ color: "#e63946" }}>*</span>
+                  </label>
                   <div className="auth-field-wrap">
                     <span className="auth-icon"><User size={16} /></span>
                     <input
@@ -217,8 +224,11 @@ const Register = () => {
                 </div>
               </div>
 
+              {/* Email */}
               <div className="mb-3">
-                <label className="form-label">Email</label>
+                <label className="form-label">
+                  Email <span style={{ color: "#e63946" }}>*</span>
+                </label>
                 <div className="auth-field-wrap">
                   <span className="auth-icon"><Mail size={16} /></span>
                   <input
@@ -233,85 +243,91 @@ const Register = () => {
                 </div>
               </div>
 
+              {/* ─── Combined Row: Time Zone | Country Code | Phone Number ─── */}
               <div className="mb-3">
-                <label className="form-label">Phone Number</label>
-                <div className="input-group" style={{ borderRadius: "10px", overflow: "hidden" }}>
-                  <select
-                    className="form-select"
-                    style={{ maxWidth: "110px", borderRight: "1.5px solid #e2e8f0" }}
-                    name="countryCode"
-                    value={formData.countryCode}
-                    onChange={handleChange}
-                  >
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+91">🇮🇳 +91</option>
-                    <option value="+61">🇦🇺 +61</option>
-                    <option value="+1">🇨🇦 +1</option>
-                  </select>
-                  <input
-                    type="tel"
-                    name="contact_number"
-                    className="form-control"
-                    placeholder="(555) 000-0000"
-                    value={formData.contact_number}
-                    onChange={handleChange}
-                    required
-                  />
+                <label className="form-label">
+                  Contact Details <span style={{ color: "#e63946" }}>*</span>
+                </label>
+                <div className="row g-2">
+                  {/* Time Zone */}
+                  <div className="col-md-4 col-12">
+                    <select
+                      name="time_zone"
+                      className="form-select"
+                      value={formData.time_zone}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="America/New_York">Eastern (US)</option>
+                      <option value="America/Chicago">Central (US)</option>
+                      <option value="America/Denver">Mountain (US)</option>
+                      <option value="America/Los_Angeles">Pacific (US)</option>
+                      <option value="Asia/Kolkata">IST (India)</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
+                  {/* Country Code */}
+                  <div className="col-md-3 col-6">
+                    <select
+                      className="form-select"
+                      name="countryCode"
+                      value={formData.countryCode}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+44">🇬🇧 +44</option>
+                    </select>
+                  </div>
+                  {/* Phone Number */}
+                  <div className="col-md-5 col-6">
+                    <input
+                      type="tel"
+                      name="contact_number"
+                      className="form-control"
+                      placeholder="10-digit phone"
+                      value={formData.contact_number}
+                      onChange={handleChange}
+                      required
+                      maxLength="10"
+                    />
+                  </div>
                 </div>
+                <small className="text-muted" style={{ fontSize: "0.75rem" }}>
+                  Phone number must be exactly 10 digits.
+                </small>
               </div>
 
-              {/* <div className="mb-3">
-                <label className="form-label">Alternate Number <span className="text-muted" style={{ fontSize: "0.8rem" }}>(optional)</span></label>
-                <div className="auth-field-wrap">
-                  <span className="auth-icon"><Phone size={16} /></span>
-                  <input
-                    type="tel"
-                    name="alter_number"
-                    className="form-control"
-                    placeholder="Alternate phone"
-                    value={formData.alter_number}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div> */}
-
+              {/* Password */}
               <div className="mb-3">
-                <label className="form-label">Time Zone</label>
-                <select
-                  name="time_zone"
-                  className="form-select"
-                  value={formData.time_zone}
-                  onChange={handleChange}
-                >
-                  <option value="America/New_York">Eastern Time (US &amp; Canada)</option>
-                  <option value="America/Chicago">Central Time (US &amp; Canada)</option>
-                  <option value="America/Denver">Mountain Time (US &amp; Canada)</option>
-                  <option value="America/Los_Angeles">Pacific Time (US &amp; Canada)</option>
-                  <option value="Asia/Kolkata">India Standard Time (IST)</option>
-                  <option value="UTC">Coordinated Universal Time (UTC)</option>
-                </select>
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label">Password</label>
+                <label className="form-label">
+                  Password <span style={{ color: "#e63946" }}>*</span>
+                </label>
                 <div className="auth-field-wrap">
                   <span className="auth-icon"><Lock size={16} /></span>
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     className="form-control"
-                    placeholder="Create a strong password"
+                    placeholder="Min 8 characters"
                     value={formData.password}
                     onChange={handleChange}
                     style={{ paddingRight: "44px" }}
                     required
+                    minLength="8"
                   />
                   <button type="button" className="eye-btn" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <Eye size={17} /> : <EyeOff size={17} />}
                   </button>
                 </div>
+                <small className="text-muted" style={{ fontSize: "0.75rem" }}>
+                  Password must be at least 8 characters.
+                </small>
               </div>
 
+              {/* Terms */}
               <div className="mb-4">
                 <div className="form-check">
                   <input
@@ -321,10 +337,12 @@ const Register = () => {
                     name="terms"
                     checked={formData.terms}
                     onChange={handleChange}
+                    required
                   />
                   <label htmlFor="terms" className="form-check-label">
                     I agree to the{" "}
                     <a href="/terms" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: "600" }}>Terms and Conditions</a>
+                    <span style={{ color: "#e63946" }}>*</span>
                   </label>
                 </div>
               </div>

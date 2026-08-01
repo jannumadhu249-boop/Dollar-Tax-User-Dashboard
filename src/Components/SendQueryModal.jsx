@@ -1,30 +1,101 @@
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import "../styles/Modal.css";
+import { URLS } from "../url";
 
-const SendQueryModal = ({ isOpen, onClose }) => {
+const SendQueryModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     firstName: "",
     mobile: "",
     message: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
+  // Load user data when modal opens
   useEffect(() => {
-    // Load user data
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      const user = JSON.parse(userData);
-      setFormData((prev) => ({
-        ...prev,
-        firstName: user.name || "balakrishna burra",
-      }));
+    if (isOpen) {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          setFormData((prev) => ({
+            ...prev,
+            firstName: user.first_name || user.name || "",
+            mobile: user.contact_number || "",
+          }));
+        } catch {
+          // ignore
+        }
+      }
+      // Reset messages
+      setError("");
+      setSuccessMsg("");
     }
-  }, []);
+  }, [isOpen]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Query sent successfully!");
-    onClose();
+    setError("");
+    setSuccessMsg("");
+
+    // Client validation
+    if (!formData.firstName.trim()) {
+      setError("First name is required.");
+      return;
+    }
+    if (!formData.mobile.trim() || formData.mobile.trim().length < 10) {
+      setError("Valid 10-digit mobile number is required.");
+      return;
+    }
+    if (!formData.message.trim()) {
+      setError("Message cannot be empty.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("You are not logged in.");
+        setLoading(false);
+        return;
+      }
+
+      const payload = {
+        first_name: formData.firstName.trim(),
+        mobile: formData.mobile.trim(),
+        message: formData.message.trim(),
+      };
+
+      const response = await fetch(URLS.SendQuery, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccessMsg(data.message || "Query submitted successfully!");
+        setFormData((prev) => ({ ...prev, message: "" }));
+        // Notify parent after a short delay
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+        }, 1000);
+      } else {
+        setError(data.message || "Failed to submit query.");
+      }
+    } catch (err) {
+      console.error("Send query error:", err);
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -41,6 +112,17 @@ const SendQueryModal = ({ isOpen, onClose }) => {
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
+            {error && (
+              <div className="alert alert-danger" style={{ fontSize: "0.9rem" }}>
+                {error}
+              </div>
+            )}
+            {successMsg && (
+              <div className="alert alert-success" style={{ fontSize: "0.9rem" }}>
+                {successMsg}
+              </div>
+            )}
+
             <div className="form-group">
               <label>First Name</label>
               <input
@@ -59,11 +141,15 @@ const SendQueryModal = ({ isOpen, onClose }) => {
               <input
                 type="tel"
                 className="form-control"
-                placeholder="+18328473790"
+                placeholder="10-digit mobile number"
                 value={formData.mobile}
                 onChange={(e) =>
-                  setFormData({ ...formData, mobile: e.target.value })
+                  setFormData({
+                    ...formData,
+                    mobile: e.target.value.replace(/\D/g, ""),
+                  })
                 }
+                maxLength="10"
                 required
               />
             </div>
@@ -73,7 +159,7 @@ const SendQueryModal = ({ isOpen, onClose }) => {
               <textarea
                 className="form-control"
                 rows="5"
-                placeholder="Message"
+                placeholder="Type your query here..."
                 value={formData.message}
                 onChange={(e) =>
                   setFormData({ ...formData, message: e.target.value })
@@ -84,8 +170,23 @@ const SendQueryModal = ({ isOpen, onClose }) => {
           </div>
 
           <div className="modal-footer">
-            <button type="submit" className="btn-send-question">
-              Send Question
+            <button
+              type="submit"
+              className="btn-send-question"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2
+                    size={18}
+                    className="spinner"
+                    style={{ marginRight: "8px", animation: "spin 1s linear infinite" }}
+                  />
+                  Sending...
+                </>
+              ) : (
+                "Send Question"
+              )}
             </button>
           </div>
         </form>

@@ -10,6 +10,8 @@ import {
   FileText,
   X,
   FolderOpen,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { URLS } from "../url";
@@ -39,6 +41,26 @@ const UploadDocuments = () => {
 
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  // ─── Auto‑dismiss alerts ─────────────────────────────────────────
+  const alertTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+    }
+    if (error || successMsg) {
+      alertTimeoutRef.current = setTimeout(() => {
+        setError("");
+        setSuccessMsg("");
+      }, 5000);
+    }
+    return () => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+    };
+  }, [error, successMsg]);
 
   /* ── 1. Fetch Document Types ───────────────────────────────────── */
   const fetchDocumentTypes = async () => {
@@ -154,7 +176,6 @@ const UploadDocuments = () => {
         data = await res.json();
       } else {
         const textErr = await res.text();
-        // console.error("Upload server response:", res.status, textErr);
         data = {
           success: false,
           message: `Server error (${res.status}): ${textErr || "Upload failed."}`,
@@ -185,9 +206,15 @@ const UploadDocuments = () => {
       alert("Document file path not found.");
       return;
     }
+
+    // Build absolute URL, ensuring no double slashes
+    const base = URLS.ImageUrl || "";
+    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+    const cleanPath = filePath.startsWith("/") ? filePath : `/${filePath}`;
     const finalUrl = filePath.startsWith("http")
       ? filePath
-      : `${URLS.ImageUrl}${filePath.startsWith("/") ? "" : "/"}${filePath}`;
+      : `${cleanBase}${cleanPath}`;
+
     setViewModalDoc(doc);
     setViewModalUrl(finalUrl);
   };
@@ -196,7 +223,6 @@ const UploadDocuments = () => {
     setViewModalDoc(null);
     setViewModalUrl("");
   };
-
 
   /* ── 5. Delete Document by ID ─────────────────────────────────── */
   const handleDeleteDocument = async (docId) => {
@@ -253,6 +279,51 @@ const UploadDocuments = () => {
     );
   };
 
+  // ─── Alert component ─────────────────────────────────────────────
+  const Alert = ({ type, message, onClose }) => {
+    if (!message) return null;
+    const isError = type === "error";
+    const Icon = isError ? XCircle : CheckCircle;
+    const color = isError ? "#dc3545" : "#198754";
+    const bg = isError ? "#fff5f5" : "#f0fff4";
+    const border = isError ? "#dc3545" : "#198754";
+    const textColor = isError ? "#842029" : "#0a5c36";
+
+    return (
+      <div
+        className="d-flex align-items-center justify-content-between py-2 px-3 mb-3"
+        style={{
+          fontSize: "0.875rem",
+          borderRadius: "8px",
+          borderLeft: `4px solid ${border}`,
+          backgroundColor: bg,
+          color: textColor,
+        }}
+      >
+        <div className="d-flex align-items-center">
+          <Icon size={18} className="me-2" style={{ color: color }} />
+          <span>{message}</span>
+        </div>
+        <button
+          type="button"
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "1.2rem",
+            lineHeight: 1,
+            cursor: "pointer",
+            color: textColor,
+            padding: "0 0.25rem",
+          }}
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <X size={18} />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="dashboard-container">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -269,7 +340,7 @@ const UploadDocuments = () => {
           <span className="breadcrumb-current">Upload Tax Documents</span>
         </div>
 
-        <div className="form-container" style={{ width: "100%", padding: "0" }}>
+        <div className="form-container" style={{ width: "100%", padding: "0 2rem" }}>
 
           {/* ── 1. Upload Form Collapsible Card ──────────────────────────────── */}
           {showUploadForm && (
@@ -287,7 +358,7 @@ const UploadDocuments = () => {
               <div
                 style={{
                   display: "flex",
-                  justify: "space-between",
+                  justifyContent: "space-between",
                   alignItems: "center",
                   marginBottom: "1.25rem",
                 }}
@@ -295,36 +366,11 @@ const UploadDocuments = () => {
                 <h3 className="form-title" style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>
                   Upload New Document
                 </h3>
-                {/* <button
-                  type="button"
-                  onClick={() => {
-                    setShowUploadForm(false);
-                    setError("");
-                    setSuccessMsg("");
-                  }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#64748b",
-                    cursor: "pointer",
-                    padding: "0.25rem",
-                  }}
-                >
-                  <X size={20} />
-                </button> */}
               </div>
 
-              {/* Status Alerts */}
-              {successMsg && (
-                <div className="alert alert-success py-2 px-3 mb-3" style={{ fontSize: "0.875rem", borderRadius: "8px" }}>
-                  {successMsg}
-                </div>
-              )}
-              {error && (
-                <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.875rem", borderRadius: "8px" }}>
-                  {error}
-                </div>
-              )}
+              {/* Alerts inside form */}
+              <Alert type="success" message={successMsg} onClose={() => setSuccessMsg("")} />
+              <Alert type="error" message={error} onClose={() => setError("")} />
 
               <form onSubmit={handleUpload}>
                 <div
@@ -372,7 +418,7 @@ const UploadDocuments = () => {
                         ref={fileInputRef}
                         className="file-input"
                         onChange={handleFileChange}
-                        accept=".pdf,.doc,.docx"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
                         disabled={uploading}
                       />
                       <label htmlFor="fileUpload" className="file-upload-label">
@@ -383,7 +429,7 @@ const UploadDocuments = () => {
                       </label>
                     </div>
                     <p className="file-note" style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "0.4rem" }}>
-                      Note: Please upload files size below 20MB (.pdf, .doc)
+                      Note: Please upload files size below 20MB (.pdf, .doc, .docx, .png, .jpg)
                     </p>
                   </div>
                 </div>
@@ -451,7 +497,7 @@ const UploadDocuments = () => {
             <div
               style={{
                 display: "flex",
-                justify: "space-between",
+                justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: "1.5rem",
                 width: "100%",
@@ -491,24 +537,12 @@ const UploadDocuments = () => {
               </button>
             </div>
 
-            {/* General Status Alerts when Form is Closed */}
-            {!showUploadForm && successMsg && (
-              <div
-                className="alert alert-success py-2 px-3 mb-3 d-flex align-items-center justify-content-between"
-                style={{ fontSize: "0.875rem", borderRadius: "8px" }}
-              >
-                <span>{successMsg}</span>
-                <X size={16} style={{ cursor: "pointer" }} onClick={() => setSuccessMsg("")} />
-              </div>
-            )}
-            {!showUploadForm && error && (
-              <div
-                className="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center justify-content-between"
-                style={{ fontSize: "0.875rem", borderRadius: "8px" }}
-              >
-                <span>{error}</span>
-                <X size={16} style={{ cursor: "pointer" }} onClick={() => setError("")} />
-              </div>
+            {/* Alerts outside form (shown when form is closed) */}
+            {!showUploadForm && (
+              <>
+                <Alert type="success" message={successMsg} onClose={() => setSuccessMsg("")} />
+                <Alert type="error" message={error} onClose={() => setError("")} />
+              </>
             )}
 
             {loadingDocs ? (
@@ -572,11 +606,12 @@ const UploadDocuments = () => {
                         </td>
                         <td style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
                           <div style={{ display: "inline-flex", gap: "0.5rem", justifyContent: "center" }}>
+                            {/* ── View Button (Icon only) ── */}
                             <button
                               onClick={() => handleViewDocument(doc)}
                               title="View Document"
                               style={{
-                                padding: "0.35rem 0.7rem",
+                                padding: "0.4rem",
                                 fontSize: "0.8rem",
                                 borderRadius: "6px",
                                 border: "1px solid #bfdbfe",
@@ -585,18 +620,18 @@ const UploadDocuments = () => {
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "0.3rem",
+                                justifyContent: "center",
                               }}
                             >
-                              <Eye size={14} />
-                              View
+                              <Eye size={16} />
                             </button>
+                            {/* ── Delete Button (Icon only) ── */}
                             <button
                               onClick={() => handleDeleteDocument(doc._id)}
                               disabled={deletingId === doc._id}
                               title="Delete Document"
                               style={{
-                                padding: "0.35rem 0.7rem",
+                                padding: "0.4rem",
                                 fontSize: "0.8rem",
                                 borderRadius: "6px",
                                 border: "1px solid #fecaca",
@@ -605,15 +640,14 @@ const UploadDocuments = () => {
                                 cursor: deletingId === doc._id ? "not-allowed" : "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "0.3rem",
+                                justifyContent: "center",
                               }}
                             >
                               {deletingId === doc._id ? (
-                                <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+                                <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
                               ) : (
-                                <Trash2 size={14} />
+                                <Trash2 size={16} />
                               )}
-                              Delete
                             </button>
                           </div>
                         </td>
@@ -722,58 +756,67 @@ const UploadDocuments = () => {
             </div>
 
             {/* Modal Body */}
-            <div style={{ flex: 1, overflow: "auto", backgroundColor: "#f1f5f9" }}>
-              {viewModalDoc.mime_type &&
-                (viewModalDoc.mime_type.includes("image") ||
-                  /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(viewModalUrl)) ? (
-                /* Image viewer */
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: "400px",
-                    padding: "1.5rem",
-                  }}
-                >
-                  <img
-                    src={viewModalUrl}
-                    alt={getFileName(viewModalDoc)}
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "70vh",
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "block";
-                    }}
-                  />
-                  <p
-                    style={{
-                      display: "none",
-                      color: "#64748b",
-                      textAlign: "center",
-                      padding: "2rem",
-                    }}
-                  >
-                    Unable to load image. Please use "Open in New Tab".
-                  </p>
-                </div>
-              ) : (
-                /* PDF / other — iframe viewer */
-                <iframe
-                  src={viewModalUrl}
-                  title={getFileName(viewModalDoc)}
-                  style={{
-                    width: "100%",
-                    height: "70vh",
-                    border: "none",
-                  }}
-                />
-              )}
-            </div>
+           {/* Modal Body */}
+<div style={{ flex: 1, overflow: "auto", backgroundColor: "#f1f5f9" }}>
+  {viewModalDoc.mime_type &&
+    (viewModalDoc.mime_type.includes("image") ||
+      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(viewModalUrl)) ? (
+    /* Image viewer */
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "400px",
+        padding: "1.5rem",
+      }}
+    >
+      <img
+        src={viewModalUrl}
+        alt={getFileName(viewModalDoc)}
+        style={{
+          maxWidth: "100%",
+          maxHeight: "70vh",
+          borderRadius: "8px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+        }}
+        onError={(e) => {
+          e.target.style.display = "none";
+          e.target.nextSibling.style.display = "block";
+        }}
+      />
+      <p
+        style={{
+          display: "none",
+          color: "#64748b",
+          textAlign: "center",
+          padding: "2rem",
+        }}
+      >
+        Unable to load image. Please use "Open in New Tab".
+      </p>
+    </div>
+  ) : (
+    /* PDF / other – iframe with toolbar hidden for PDFs */
+    (() => {
+      const isPdf =
+        viewModalDoc.mime_type?.includes('pdf') ||
+        /\.pdf$/i.test(viewModalUrl);
+      const src = isPdf ? viewModalUrl + '#toolbar=0' : viewModalUrl;
+      return (
+        <iframe
+          src={src}
+          title={getFileName(viewModalDoc)}
+          style={{
+            width: "100%",
+            height: "70vh",
+            border: "none",
+          }}
+        />
+      );
+    })()
+  )}
+</div>
           </div>
         </div>
       )}

@@ -3,19 +3,20 @@ import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle, Mail, Lock } from "lucide-react";
 import { URLS } from "../url";
 
-// Keywords that indicate the email itself is the problem (not registered / not found)
+// Keywords for server error classification
 const EMAIL_ERROR_KEYWORDS = [
   "not found", "not registered", "no account", "does not exist",
   "invalid email", "user not found", "email not", "account not",
 ];
-
-// Keywords that indicate the password is the problem
 const PASSWORD_ERROR_KEYWORDS = [
   "incorrect password", "wrong password", "invalid password",
   "password is incorrect", "password mismatch",
 ];
 
+// Validation constants
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,16 +25,54 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const navigate = useNavigate();
 
+  // Clear a specific field error and general error
   const clearFieldError = (name) =>
     setFieldErrors((prev) => ({ ...prev, [name]: "", general: "" }));
 
+  // Central validation function
+  const validateForm = (email, password) => {
+    const errors = { email: "", password: "", general: "" };
+    let isValid = true;
+
+    const trimmedEmail = email.trim();
+
+    // Email validation
+    if (!trimmedEmail) {
+      errors.email = "Email is required.";
+      isValid = false;
+    } else if (!emailRegex.test(trimmedEmail)) {
+      errors.email = "Please enter a valid email address.";
+      isValid = false;
+    }
+
+    // Password validation
+    if (!password) {
+      errors.password = "Password is required.";
+      isValid = false;
+    } else if (password.length < PASSWORD_MIN_LENGTH) {
+      errors.password = `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
+      isValid = false;
+    } else if (!PASSWORD_REGEX.test(password)) {
+      errors.password =
+        "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.";
+      isValid = false;
+    }
+
+    return { errors, isValid };
+  };
+
+  // ── Handlers ────────────────────────────────────────────────────────────
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Trim email automatically; keep password as typed
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "email" ? value.trim() : value,
+    }));
     clearFieldError(name);
   };
 
-  // Validate email format on blur
   const handleEmailBlur = () => {
     const email = formData.email.trim();
     if (!email) return;
@@ -44,7 +83,17 @@ const Login = () => {
     }
   };
 
-  // Parse server error message and assign to correct field
+  const handlePasswordBlur = () => {
+    if (!formData.password) return;
+    const { errors } = validateForm(formData.email, formData.password);
+    setFieldErrors((prev) => ({
+      ...prev,
+      password: errors.password,
+      general: "",
+    }));
+  };
+
+  // Parse server error and assign to appropriate field
   const applyServerError = (message) => {
     const lower = (message || "").toLowerCase();
     if (EMAIL_ERROR_KEYWORDS.some((k) => lower.includes(k))) {
@@ -60,18 +109,10 @@ const Login = () => {
     e.preventDefault();
     setFieldErrors({ email: "", password: "", general: "" });
 
-    // Client-side field validation
-    const newErrors = { email: "", password: "", general: "" };
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required.";
-    } else if (!emailRegex.test(formData.email.trim())) {
-      newErrors.email = "Please enter a valid email address.";
-    }
-    if (!formData.password) {
-      newErrors.password = "Password is required.";
-    }
-    if (newErrors.email || newErrors.password) {
-      setFieldErrors(newErrors);
+    // Client‑side validation
+    const { errors, isValid } = validateForm(formData.email, formData.password);
+    if (!isValid) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -112,17 +153,29 @@ const Login = () => {
         applyServerError(data.message);
       }
     } catch (err) {
-      setFieldErrors({ email: "", password: "", general: "Network error. Please check your connection and try again." });
+      setFieldErrors({
+        email: "",
+        password: "",
+        general: "Network error. Please check your connection and try again.",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────
+
   return (
-    <div className="container-fluid p-0 min-vh-100 d-flex align-items-stretch" style={{ overflowX: "hidden", backgroundColor: "#f3f4f6" }}>
+    <div
+      className="container-fluid p-0 min-vh-100 d-flex align-items-stretch"
+      style={{ overflowX: "hidden", backgroundColor: "#f3f4f6" }}
+    >
       <div className="row g-0 w-100 min-vh-100">
-        {/* Left Side */}
-        <div className="col-lg-7 p-0 d-none d-lg-flex flex-column text-white position-relative" style={{ minHeight: "100vh" }}>
+        {/* Left Side – Branding */}
+        <div
+          className="col-lg-7 p-0 d-none d-lg-flex flex-column text-white position-relative"
+          style={{ minHeight: "100vh" }}
+        >
           <div
             className="h-100 d-flex flex-column justify-content-center align-items-center text-white text-center p-5 position-relative"
             style={{
@@ -136,12 +189,16 @@ const Login = () => {
             <div
               className="position-absolute top-0 start-0 w-100 h-100"
               style={{
-                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 27, 75, 0.88) 100%)",
+                background:
+                  "linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 27, 75, 0.88) 100%)",
               }}
             />
 
             {/* Centered content */}
-            <div className="position-relative d-flex flex-column align-items-center" style={{ maxWidth: "480px", width: "100%" }}>
+            <div
+              className="position-relative d-flex flex-column align-items-center"
+              style={{ maxWidth: "480px", width: "100%" }}
+            >
               <img
                 src="/images/logo-white.png"
                 alt="Tax Filer"
@@ -164,10 +221,16 @@ const Login = () => {
                   <div
                     key={index}
                     className="d-flex align-items-center mb-3"
-                    style={{ background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px 16px" }}
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      borderRadius: "10px",
+                      padding: "10px 16px",
+                    }}
                   >
                     <CheckCircle size={22} style={{ color: "#fbbf24", flexShrink: 0 }} />
-                    <span className="ms-3 fw-normal" style={{ letterSpacing: "0.4px", fontSize: "0.97rem" }}>{item}</span>
+                    <span className="ms-3 fw-normal" style={{ letterSpacing: "0.4px", fontSize: "0.97rem" }}>
+                      {item}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -175,10 +238,15 @@ const Login = () => {
           </div>
         </div>
 
+        {/* Right Side – Login Form */}
         <div className="col-lg-5 bg-white d-flex align-items-center">
           <div className="w-100 p-4 p-lg-5">
-            <h3 className="text-center mb-1 fw-bold" style={{ color: "#1e1b4b", fontSize: "1.6rem" }}>Welcome Back</h3>
-            <p className="text-center text-muted mb-4" style={{ fontSize: "0.88rem" }}>Sign in to your account</p>
+            <h3 className="text-center mb-1 fw-bold" style={{ color: "#1e1b4b", fontSize: "1.6rem" }}>
+              Welcome Back
+            </h3>
+            <p className="text-center text-muted mb-4" style={{ fontSize: "0.88rem" }}>
+              Sign in to your account
+            </p>
 
             {/* General Error Alert */}
             {fieldErrors.general && (
@@ -188,6 +256,7 @@ const Login = () => {
             )}
 
             <form onSubmit={handleSubmit}>
+              {/* Email Field */}
               <div className="mb-3">
                 <label className="form-label">Email</label>
                 <div className="auth-field-wrap">
@@ -207,7 +276,11 @@ const Login = () => {
                 {fieldErrors.email && (
                   <div className="d-flex align-items-center mt-1" style={{ gap: "5px" }}>
                     <svg width="13" height="13" viewBox="0 0 20 20" fill="#dc3545">
-                      <path fillRule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span style={{ fontSize: "0.8rem", color: "#dc3545", fontWeight: "500" }}>
                       {fieldErrors.email}
@@ -216,6 +289,7 @@ const Login = () => {
                 )}
               </div>
 
+              {/* Password Field */}
               <div className="mb-3">
                 <label className="form-label">Password</label>
                 <div className="auth-field-wrap">
@@ -229,6 +303,7 @@ const Login = () => {
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={handleChange}
+                    onBlur={handlePasswordBlur}
                     style={{ paddingRight: "44px" }}
                   />
                   <button
@@ -242,25 +317,40 @@ const Login = () => {
                 {fieldErrors.password && (
                   <div className="d-flex align-items-center mt-1" style={{ gap: "5px" }}>
                     <svg width="13" height="13" viewBox="0 0 20 20" fill="#dc3545">
-                      <path fillRule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span style={{ fontSize: "0.8rem", color: "#dc3545", fontWeight: "500" }}>
                       {fieldErrors.password}
                     </span>
                   </div>
                 )}
+                {/* Optional password hint – shows only when password is entered and no error */}
+                {formData.password && !fieldErrors.password && (
+                  <div className="mt-1" style={{ fontSize: "0.78rem", color: "#6c757d" }}>
+                    Must have 8+ chars, uppercase, lowercase, number, and special character.
+                  </div>
+                )}
               </div>
 
+              {/* Remember & Forgot */}
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className="form-check mb-0">
                   <input type="checkbox" className="form-check-input" id="remember" />
                   <label htmlFor="remember" className="form-check-label">Remember Me</label>
                 </div>
-                <Link to="/forgot-password" style={{ color: "#4f46e5", textDecoration: "none", fontSize: "0.85rem", fontWeight: "600" }}>
+                <Link
+                  to="/forgot-password"
+                  style={{ color: "#4f46e5", textDecoration: "none", fontSize: "0.85rem", fontWeight: "600" }}
+                >
                   Forgot Password?
                 </Link>
               </div>
 
+              {/* Submit Button */}
               <button
                 type="submit"
                 className="btn btn-danger btn-auth w-100 py-2"
@@ -277,15 +367,19 @@ const Login = () => {
               </button>
             </form>
 
+            {/* Divider */}
             <div className="d-flex align-items-center my-4">
               <hr className="flex-grow-1" />
               <span className="mx-2 text-muted" style={{ fontSize: "0.85rem" }}>Or</span>
               <hr className="flex-grow-1" />
             </div>
 
+            {/* Register Link */}
             <p className="text-center mb-0" style={{ fontSize: "0.9rem", color: "#64748b" }}>
               Don't have an account?{" "}
-              <Link to="/register" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: "600" }}>Register</Link>
+              <Link to="/register" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: "600" }}>
+                Register
+              </Link>
             </p>
           </div>
         </div>

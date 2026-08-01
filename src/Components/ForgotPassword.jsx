@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle, Eye, EyeOff, Mail, Lock, ShieldCheck } from "lucide-react";
 import { URLS } from "../url";
 
-/* ── Shared input styles ── */
+/* ── Shared input styles (unchanged) ── */
 const inputBase = {
   width: "100%",
   padding: "12px 16px 12px 44px",
@@ -50,7 +50,13 @@ const FieldLabel = ({ children }) => (
 
 const STEPS = ["email", "otp", "password"];
 
+// ── Validation constants ──
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
 const ForgotPassword = () => {
+  // ── State ──
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -62,38 +68,121 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // ── Field‑specific errors ──
+  const [fieldErrors, setFieldErrors] = useState({
+    email: "",
+    otp: "",
+    password: "",
+    confirm: "",
+  });
+
   const otpRefs = useRef([]);
   const navigate = useNavigate();
 
-  /* OTP helpers */
+  // ── Helper to clear a field error ──
+  const clearFieldError = (field) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  // ── Validation functions ──
+  const validateEmail = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Email is required.";
+    if (!emailRegex.test(trimmed)) return "Please enter a valid email address.";
+    return "";
+  };
+
+  const validatePassword = (value) => {
+    if (!value) return "Password is required.";
+    if (value.length < PASSWORD_MIN_LENGTH)
+      return `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
+    if (!PASSWORD_REGEX.test(value))
+      return "Password must contain at least one uppercase, one lowercase, one digit, and one special character.";
+    return "";
+  };
+
+  const validateConfirm = (password, confirm) => {
+    if (!confirm) return "Please confirm your password.";
+    if (password !== confirm) return "Passwords do not match.";
+    return "";
+  };
+
+  // ── Handlers ──
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    clearFieldError("email");
+    setError("");
+  };
+
+  const handleEmailBlur = () => {
+    const err = validateEmail(email);
+    setFieldErrors((prev) => ({ ...prev, email: err }));
+  };
+
   const handleOtpChange = (idx, val) => {
     const digit = val.replace(/\D/g, "").slice(-1);
     const next = [...otpDigits];
     next[idx] = digit;
     setOtpDigits(next);
+    clearFieldError("otp");
+    setError("");
     if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
   };
+
   const handleOtpKeyDown = (idx, e) => {
     if (e.key === "Backspace" && !otpDigits[idx] && idx > 0)
       otpRefs.current[idx - 1]?.focus();
   };
+
   const handlePaste = (e) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     const next = [...otpDigits];
     pasted.split("").forEach((c, i) => { next[i] = c; });
     setOtpDigits(next);
+    clearFieldError("otp");
+    setError("");
     otpRefs.current[Math.min(pasted.length, 5)]?.focus();
   };
 
-  /* ── Step 1: Send OTP ── */
+  const handlePasswordChange = (e) => {
+    setNewPassword(e.target.value);
+    clearFieldError("password");
+    setError("");
+    // Also clear confirm error if it exists and may become valid
+    if (fieldErrors.confirm) {
+      const confirmErr = validateConfirm(e.target.value, confirmPassword);
+      if (!confirmErr) clearFieldError("confirm");
+    }
+  };
+
+  const handlePasswordBlur = () => {
+    const err = validatePassword(newPassword);
+    setFieldErrors((prev) => ({ ...prev, password: err }));
+  };
+
+  const handleConfirmChange = (e) => {
+    setConfirmPassword(e.target.value);
+    clearFieldError("confirm");
+    setError("");
+  };
+
+  const handleConfirmBlur = () => {
+    const err = validateConfirm(newPassword, confirmPassword);
+    setFieldErrors((prev) => ({ ...prev, confirm: err }));
+  };
+
+  // ── Step 1: Send OTP ──
   const sendOtp = async (e) => {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
 
-    if (!email.trim()) {
-      setError("Please enter your email address.");
+    // Validate email
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setFieldErrors((prev) => ({ ...prev, email: emailErr }));
       return;
     }
 
@@ -107,7 +196,7 @@ const ForgotPassword = () => {
       const data = await response.json();
 
       if (data.success) {
-        // 1. Try every common field name in the API response
+        // Resolve userId from response or localStorage fallback
         const fromApi =
           data?.data?.userId ||
           data?.data?.member_id ||
@@ -120,8 +209,6 @@ const ForgotPassword = () => {
           data?.id ||
           data?.user_id ||
           "";
-
-        // 2. Fallback → use member_id stored in localStorage from a previous login
         const fromStorage = (() => {
           try {
             const stored = localStorage.getItem("user");
@@ -132,11 +219,8 @@ const ForgotPassword = () => {
             return "";
           }
         })();
-
         const resolvedId = fromApi || fromStorage;
         setUserId(resolvedId);
-        console.log("GenerateOtp response:", data, "| resolvedUserId:", resolvedId);
-
         setSuccessMsg("OTP sent to your email!");
         setStep("otp");
       } else {
@@ -149,8 +233,7 @@ const ForgotPassword = () => {
     }
   };
 
-
-  /* ── Step 2: Verify OTP ── */
+  // ── Step 2: Verify OTP ──
   const verifyOtp = async (e) => {
     e.preventDefault();
     setError("");
@@ -158,11 +241,11 @@ const ForgotPassword = () => {
 
     const otp = otpDigits.join("");
     if (otp.length < 6) {
-      setError("Please enter the complete 6-digit OTP.");
+      setFieldErrors((prev) => ({ ...prev, otp: "Please enter the complete 6-digit OTP." }));
       return;
     }
 
-    // Last-resort: if userId is still empty, try localStorage one more time
+    // Resolve userId again if needed
     let resolvedUserId = userId;
     if (!resolvedUserId) {
       try {
@@ -171,7 +254,7 @@ const ForgotPassword = () => {
           const parsed = JSON.parse(stored);
           resolvedUserId = parsed?.member_id || parsed?.userId || parsed?._id || "";
         }
-      } catch { /* ignore parse errors */ }
+      } catch { /* ignore */ }
     }
 
     if (!resolvedUserId) {
@@ -192,11 +275,7 @@ const ForgotPassword = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Keep userId in sync from the verify response if the API echoes it back
-        const echoed =
-          data?.data?.userId || data?.data?.member_id ||
-          data?.data?._id || data?.userId || data?.member_id || resolvedUserId;
-        setUserId(echoed);
+        setUserId(data?.data?.userId || data?.data?.member_id || data?.userId || resolvedUserId);
         setSuccessMsg("OTP verified successfully!");
         setStep("password");
       } else {
@@ -209,8 +288,7 @@ const ForgotPassword = () => {
     }
   };
 
-
-  /* ── Resend OTP ── */
+  // ── Resend OTP ──
   const resendOtp = async () => {
     setError("");
     setSuccessMsg("");
@@ -226,6 +304,7 @@ const ForgotPassword = () => {
         setSuccessMsg("New OTP sent to your email!");
         setOtpDigits(["", "", "", "", "", ""]);
         otpRefs.current[0]?.focus();
+        clearFieldError("otp");
       } else {
         setError(data.message || "Failed to resend OTP.");
       }
@@ -236,18 +315,21 @@ const ForgotPassword = () => {
     }
   };
 
-  /* ── Step 3: Reset Password ── */
+  // ── Step 3: Reset Password ──
   const updatePwd = async (e) => {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
 
-    if (!newPassword || newPassword.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+    // Validate both password fields
+    const pwdErr = validatePassword(newPassword);
+    const confirmErr = validateConfirm(newPassword, confirmPassword);
+    if (pwdErr || confirmErr) {
+      setFieldErrors({
+        ...fieldErrors,
+        password: pwdErr,
+        confirm: confirmErr,
+      });
       return;
     }
 
@@ -286,7 +368,7 @@ const ForgotPassword = () => {
     >
       <div className="row g-0 w-100 min-vh-100">
 
-        {/* ── Left Panel ── */}
+        {/* ── Left Panel (unchanged) ── */}
         <div
           className="col-lg-7 p-0 d-none d-lg-flex flex-column text-white position-relative"
           style={{ minHeight: "100vh" }}
@@ -369,7 +451,7 @@ const ForgotPassword = () => {
               })}
             </div>
 
-            {/* Alert Messages */}
+            {/* General Alerts */}
             {error && (
               <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
                 {error}
@@ -399,13 +481,21 @@ const ForgotPassword = () => {
                         type="email"
                         placeholder="you@example.com"
                         value={email}
-                        onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                        onChange={handleEmailChange}
+                        onBlur={handleEmailBlur}
                         onFocus={onFocus}
-                        onBlur={onBlur}
-                        style={inputBase}
+                        style={{
+                          ...inputBase,
+                          borderColor: fieldErrors.email ? "#dc3545" : "#e2e8f0",
+                        }}
                         required
                       />
                     </div>
+                    {fieldErrors.email && (
+                      <div className="mt-1" style={{ fontSize: "0.8rem", color: "#dc3545", fontWeight: "500" }}>
+                        {fieldErrors.email}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="submit"
@@ -442,7 +532,6 @@ const ForgotPassword = () => {
                 <form onSubmit={verifyOtp}>
                   <div className="mb-4">
                     <FieldLabel>6-Digit Verification Code</FieldLabel>
-                    {/* 6 individual OTP boxes */}
                     <div
                       style={{ display: "flex", gap: "10px", justifyContent: "center" }}
                       onPaste={handlePaste}
@@ -485,6 +574,11 @@ const ForgotPassword = () => {
                         />
                       ))}
                     </div>
+                    {fieldErrors.otp && (
+                      <div className="mt-2 text-center" style={{ fontSize: "0.8rem", color: "#dc3545", fontWeight: "500" }}>
+                        {fieldErrors.otp}
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -543,10 +637,14 @@ const ForgotPassword = () => {
                         type={showNewPwd ? "text" : "password"}
                         placeholder="Enter new password"
                         value={newPassword}
-                        onChange={(e) => { setNewPassword(e.target.value); setError(""); }}
+                        onChange={handlePasswordChange}
+                        onBlur={handlePasswordBlur}
                         onFocus={onFocus}
-                        onBlur={onBlur}
-                        style={{ ...inputBase, paddingRight: "44px" }}
+                        style={{
+                          ...inputBase,
+                          paddingRight: "44px",
+                          borderColor: fieldErrors.password ? "#dc3545" : "#e2e8f0",
+                        }}
                         required
                       />
                       <button
@@ -561,6 +659,17 @@ const ForgotPassword = () => {
                         {showNewPwd ? <Eye size={17} /> : <EyeOff size={17} />}
                       </button>
                     </div>
+                    {fieldErrors.password && (
+                      <div className="mt-1" style={{ fontSize: "0.8rem", color: "#dc3545", fontWeight: "500" }}>
+                        {fieldErrors.password}
+                      </div>
+                    )}
+                    {/* Optional hint */}
+                    {newPassword && !fieldErrors.password && (
+                      <div className="mt-1" style={{ fontSize: "0.78rem", color: "#6c757d" }}>
+                        Must have 8+ chars, uppercase, lowercase, digit, and special character.
+                      </div>
+                    )}
                   </div>
 
                   <div className="mb-4">
@@ -571,10 +680,14 @@ const ForgotPassword = () => {
                         type={showConfirmPwd ? "text" : "password"}
                         placeholder="Confirm new password"
                         value={confirmPassword}
-                        onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
+                        onChange={handleConfirmChange}
+                        onBlur={handleConfirmBlur}
                         onFocus={onFocus}
-                        onBlur={onBlur}
-                        style={{ ...inputBase, paddingRight: "44px" }}
+                        style={{
+                          ...inputBase,
+                          paddingRight: "44px",
+                          borderColor: fieldErrors.confirm ? "#dc3545" : "#e2e8f0",
+                        }}
                         required
                       />
                       <button
@@ -589,6 +702,11 @@ const ForgotPassword = () => {
                         {showConfirmPwd ? <Eye size={17} /> : <EyeOff size={17} />}
                       </button>
                     </div>
+                    {fieldErrors.confirm && (
+                      <div className="mt-1" style={{ fontSize: "0.8rem", color: "#dc3545", fontWeight: "500" }}>
+                        {fieldErrors.confirm}
+                      </div>
+                    )}
                   </div>
 
                   <button

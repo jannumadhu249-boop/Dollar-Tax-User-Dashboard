@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../Components/Sidebar";
 import Header from "../Components/Header";
 import Footer from "../Components/Footer";
@@ -6,6 +6,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { URLS } from "../url";
 import "../styles/Dashboard.css";
+import { Pencil, Trash2, Plus, X, CheckCircle, XCircle } from "lucide-react";
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 const toDate = (iso) => (iso ? new Date(iso) : null);
@@ -51,6 +52,26 @@ const AddressInTaxYear = () => {
 
   // delete loading state
   const [deletingId, setDeletingId] = useState(null);
+
+  // ─── Auto‑dismiss alerts ─────────────────────────────────────────
+  const alertTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+    }
+    if (formError || formSuccess) {
+      alertTimeoutRef.current = setTimeout(() => {
+        setFormError("");
+        setFormSuccess("");
+      }, 5000);
+    }
+    return () => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+    };
+  }, [formError, formSuccess]);
 
   /* Sidebar resize */
   useEffect(() => {
@@ -98,7 +119,16 @@ const AddressInTaxYear = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setAddresses(data.data || []);
+        const addrs = data.data || [];
+        setAddresses(addrs);
+        // If no addresses, show the add form immediately
+        if (addrs.length === 0) {
+          setShowForm(true);
+          setEditId(null);
+          setForm(EMPTY_FORM);
+        } else {
+          setShowForm(false);
+        }
       } else {
         setListError(data.message || "Failed to fetch addresses.");
       }
@@ -156,13 +186,35 @@ const AddressInTaxYear = () => {
     }
   };
 
-  /* ── 5. Save (Create or Update) ────────────────────────────────── */
+  /* ── 5. Save (Create or Update) with Validation ────────────────── */
   const handleSave = async (e) => {
     e.preventDefault();
     setFormError("");
     setFormSuccess("");
-    setSaving(true);
 
+    // --- Validation ---
+    if (!form.person) {
+      setFormError("Please select a person.");
+      return;
+    }
+    if (!form.state_id) {
+      setFormError("Please select a state.");
+      return;
+    }
+    if (!form.address_from) {
+      setFormError("Please select the 'From' date.");
+      return;
+    }
+    if (!form.address_to) {
+      setFormError("Please select the 'To' date.");
+      return;
+    }
+    if (form.address_from > form.address_to) {
+      setFormError("'From' date must be before or equal to 'To' date.");
+      return;
+    }
+
+    setSaving(true);
     try {
       const token = localStorage.getItem("token");
       const body = {
@@ -236,6 +288,14 @@ const AddressInTaxYear = () => {
     if (formSuccess) setFormSuccess("");
   };
 
+  // Close form (only when addresses exist)
+  const closeForm = () => {
+    setShowForm(false);
+    setFormError("");
+    setFormSuccess("");
+  };
+
+  // ─── Render ──────────────────────────────────────────────────────
   return (
     <div className="dashboard-container">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -253,243 +313,311 @@ const AddressInTaxYear = () => {
         </div>
 
         <div className="form-container">
-
-          {/* ── Addresses List Card ────────────────────────────────────── */}
-          <div className="form-card" style={{ marginBottom: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-              <div>
-                <h3 className="form-title" style={{ margin: 0 }}>Addresses in Tax Year</h3>
-                <p className="form-description" style={{ margin: "0.25rem 0 0 0" }}>
-                  Please provide the period of each state where the taxpayer and spouse lived in during the Tax Year.
-                </p>
-              </div>
-              <button
-                className="btn-save"
-                style={{ padding: "0.5rem 1.25rem", fontSize: "0.875rem", whiteSpace: "nowrap" }}
-                onClick={openAdd}
-              >
-                + Add Address
-              </button>
-            </div>
-
-            {listError && (
-              <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
-                {listError}
-              </div>
-            )}
-
-            {listLoading ? (
+          {listLoading ? (
+            <div className="form-card">
               <div className="text-center py-4">
                 <div className="spinner-border text-primary" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
                 <p className="mt-2 text-muted" style={{ fontSize: "0.9rem" }}>Fetching Addresses...</p>
               </div>
-            ) : addresses.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "2.5rem 0", color: "#94a3b8" }}>
-                <p style={{ fontSize: "0.95rem" }}>No address records added yet.</p>
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
-                  <thead>
-                    <tr style={{ background: "rgba(99,102,241,0.08)", textAlign: "left" }}>
-                      {["Person", "State", "From", "To", "Actions"].map((h) => (
-                        <th key={h} style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {addresses.map((addr, i) => (
-                      <tr
-                        key={addr._id}
+            </div>
+          ) : (
+            <>
+              {/* ── Show List only if addresses exist AND form is hidden ── */}
+              {!showForm && addresses.length > 0 && (
+                <div className="form-card" style={{ marginBottom: "1.5rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                    <div>
+                      <h3 className="form-title" style={{ margin: 0 }}>Addresses in Tax Year</h3>
+                      <p className="form-description" style={{ margin: "0.25rem 0 0 0" }}>
+                        Please provide the period of each state where the taxpayer and spouse lived in during the Tax Year.
+                      </p>
+                    </div>
+                    <button
+                      className="btn-save"
+                      style={{ padding: "0.5rem 1.25rem", fontSize: "0.875rem", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "0.5rem" }}
+                      onClick={openAdd}
+                    >
+                      <Plus size={18} /> Add Address
+                    </button>
+                  </div>
+
+                  {listError && (
+                    <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
+                      {listError}
+                    </div>
+                  )}
+
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+                      <thead>
+                        <tr style={{ background: "rgba(99,102,241,0.08)", textAlign: "left" }}>
+                          {["Person", "State", "From", "To", "Actions"].map((h) => (
+                            <th key={h} style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {addresses.map((addr, i) => (
+                          <tr
+                            key={addr._id}
+                            style={{
+                              borderBottom: "1px solid rgba(0,0,0,0.06)",
+                              background: i % 2 === 0 ? "transparent" : "rgba(99,102,241,0.02)",
+                            }}
+                          >
+                            <td style={{ padding: "0.75rem 1rem", color: "#1e293b", fontWeight: 500 }}>
+                              {addr.person || "—"}
+                            </td>
+                            <td style={{ padding: "0.75rem 1rem", color: "#64748b" }}>
+                              {addr.state?.name || addr.state_id || "—"}
+                            </td>
+                            <td style={{ padding: "0.75rem 1rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                              {fmtDate(addr.address_from)}
+                            </td>
+                            <td style={{ padding: "0.75rem 1rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                              {fmtDate(addr.address_to)}
+                            </td>
+                            <td style={{ padding: "0.75rem 1rem", whiteSpace: "nowrap" }}>
+                              <button
+                                onClick={() => openEdit(addr._id)}
+                                style={{
+                                  marginRight: "0.5rem",
+                                  padding: "0.4rem 0.6rem",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  background: "rgba(99,102,241,0.12)",
+                                  color: "#6366f1",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                                title="Edit"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(addr._id)}
+                                disabled={deletingId === addr._id}
+                                style={{
+                                  padding: "0.4rem 0.6rem",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  background: "rgba(239,68,68,0.1)",
+                                  color: "#dc2626",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                                title="Delete"
+                              >
+                                {deletingId === addr._id ? (
+                                  <span style={{ fontSize: "0.8rem" }}>...</span>
+                                ) : (
+                                  <Trash2 size={16} />
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Show Form if: no addresses OR showForm === true ── */}
+              {(showForm || addresses.length === 0) && (
+                <div className="form-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                    <h3 className="form-title" style={{ margin: 0 }}>
+                      {editId ? "Edit Address" : "Add Address"}
+                    </h3>
+                    {addresses.length > 0 && (
+                      <button
+                        onClick={closeForm}
                         style={{
-                          borderBottom: "1px solid rgba(0,0,0,0.06)",
-                          background: i % 2 === 0 ? "transparent" : "rgba(99,102,241,0.02)",
+                          background: "none", border: "none", fontSize: "1.25rem",
+                          cursor: "pointer", color: "#94a3b8", lineHeight: 1,
                         }}
                       >
-                        <td style={{ padding: "0.75rem 1rem", color: "#1e293b", fontWeight: 500 }}>
-                          {addr.person || "—"}
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", color: "#64748b" }}>
-                          {addr.state?.name || addr.state_id || "—"}
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", color: "#64748b", whiteSpace: "nowrap" }}>
-                          {fmtDate(addr.address_from)}
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", color: "#64748b", whiteSpace: "nowrap" }}>
-                          {fmtDate(addr.address_to)}
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", whiteSpace: "nowrap" }}>
-                          <button
-                            onClick={() => openEdit(addr._id)}
-                            style={{
-                              marginRight: "0.5rem",
-                              padding: "0.3rem 0.85rem",
-                              border: "none",
-                              borderRadius: "6px",
-                              background: "rgba(99,102,241,0.12)",
-                              color: "#6366f1",
-                              fontWeight: 600,
-                              fontSize: "0.8rem",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(addr._id)}
-                            disabled={deletingId === addr._id}
-                            style={{
-                              padding: "0.3rem 0.85rem",
-                              border: "none",
-                              borderRadius: "6px",
-                              background: "rgba(239,68,68,0.1)",
-                              color: "#dc2626",
-                              fontWeight: 600,
-                              fontSize: "0.8rem",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {deletingId === addr._id ? "..." : "Delete"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* ── Add / Edit Form Card ────────────────────────────────────── */}
-          {showForm && (
-            <div className="form-card">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-                <h3 className="form-title" style={{ margin: 0 }}>
-                  {editId ? "Edit Address" : "Add Address"}
-                </h3>
-                <button
-                  onClick={() => setShowForm(false)}
-                  style={{
-                    background: "none", border: "none", fontSize: "1.25rem",
-                    cursor: "pointer", color: "#94a3b8", lineHeight: 1,
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              {formError && (
-                <div className="alert alert-danger py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
-                  {formError}
-                </div>
-              )}
-              {formSuccess && (
-                <div className="alert alert-success py-2 px-3 mb-3" style={{ fontSize: "0.87rem", borderRadius: "8px" }}>
-                  {formSuccess}
-                </div>
-              )}
-
-              <form onSubmit={handleSave}>
-                <div className="address-grid">
-                  <div className="form-group">
-                    <label>Select Person <span className="required">*</span></label>
-                    <select
-                      className="form-control"
-                      value={form.person}
-                      onChange={(e) => setField("person", e.target.value)}
-                      required
-                    >
-                      <option value="">-Select Person-</option>
-                      <option value="Taxpayer">Taxpayer</option>
-                      <option value="Spouse">Spouse</option>
-                      <option value="Both">Both</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label>State <span className="required">*</span></label>
-                    <select
-                      className="form-control"
-                      value={form.state_id}
-                      onChange={(e) => setField("state_id", e.target.value)}
-                      required
-                      disabled={statesLoading}
-                    >
-                      <option value="">
-                        {statesLoading ? "Loading states..." : "Select state"}
-                      </option>
-                      {states.map((st) => (
-                        <option key={st._id} value={st._id}>
-                          {st.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label>From <span className="required">*</span></label>
-                    <DatePicker
-                      selected={form.address_from}
-                      onChange={(date) => setField("address_from", date)}
-                      dateFormat="MM/dd/yyyy"
-                      className="form-control"
-                      placeholderText="MM/DD/YYYY"
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                      maxDate={form.address_to && form.address_to < today ? form.address_to : today}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>To <span className="required">*</span></label>
-                    <DatePicker
-                      selected={form.address_to}
-                      onChange={(date) => setField("address_to", date)}
-                      dateFormat="MM/dd/yyyy"
-                      className="form-control"
-                      placeholderText="MM/DD/YYYY"
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                      minDate={form.address_from || undefined}
-                      maxDate={today}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-actions" style={{ marginTop: "1.5rem" }}>
-                  <button
-                    type="button"
-                    className="btn-cancel"
-                    onClick={() => setShowForm(false)}
-                    style={{ marginRight: "0.75rem" }}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn-save" disabled={saving}>
-                    {saving ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Saving...
-                      </>
-                    ) : editId ? (
-                      "Update"
-                    ) : (
-                      "Submit"
+                        <X size={20} />
+                      </button>
                     )}
-                  </button>
+                  </div>
+
+                  {/* ─── Advanced Alerts ─── */}
+                  {formError && (
+                    <div
+                      className="alert alert-danger d-flex align-items-center justify-content-between py-2 px-3 mb-3"
+                      style={{
+                        fontSize: "0.87rem",
+                        borderRadius: "8px",
+                        borderLeft: "4px solid #dc3545",
+                        backgroundColor: "#fff5f5",
+                        color: "#842029",
+                      }}
+                    >
+                      <div className="d-flex align-items-center">
+                        <XCircle size={18} className="me-2" style={{ color: "#dc3545" }} />
+                        <span>{formError}</span>
+                      </div>
+                      <button
+                        type="button"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          fontSize: "1.2rem",
+                          lineHeight: 1,
+                          cursor: "pointer",
+                          color: "#842029",
+                        }}
+                        onClick={() => setFormError("")}
+                        aria-label="Close"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  )}
+
+                  {formSuccess && (
+                    <div
+                      className="alert alert-success d-flex align-items-center justify-content-between py-2 px-3 mb-3"
+                      style={{
+                        fontSize: "0.87rem",
+                        borderRadius: "8px",
+                        borderLeft: "4px solid #198754",
+                        backgroundColor: "#f0fff4",
+                        color: "#0a5c36",
+                      }}
+                    >
+                      <div className="d-flex align-items-center">
+                        <CheckCircle size={18} className="me-2" style={{ color: "#198754" }} />
+                        <span>{formSuccess}</span>
+                      </div>
+                      <button
+                        type="button"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          fontSize: "1.2rem",
+                          lineHeight: 1,
+                          cursor: "pointer",
+                          color: "#0a5c36",
+                        }}
+                        onClick={() => setFormSuccess("")}
+                        aria-label="Close"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSave}>
+                    <div className="address-grid">
+                      <div className="form-group">
+                        <label>Select Person <span className="required">*</span></label>
+                        <select
+                          className="form-control"
+                          value={form.person}
+                          onChange={(e) => setField("person", e.target.value)}
+                          required
+                        >
+                          <option value="">-Select Person-</option>
+                          <option value="Taxpayer">Taxpayer</option>
+                          <option value="Spouse">Spouse</option>
+                          <option value="Both">Both</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>State <span className="required">*</span></label>
+                        <select
+                          className="form-control"
+                          value={form.state_id}
+                          onChange={(e) => setField("state_id", e.target.value)}
+                          required
+                          disabled={statesLoading}
+                        >
+                          <option value="">
+                            {statesLoading ? "Loading states..." : "Select state"}
+                          </option>
+                          {states.map((st) => (
+                            <option key={st._id} value={st._id}>
+                              {st.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>From <span className="required">*</span></label>
+                        <DatePicker
+                          selected={form.address_from}
+                          onChange={(date) => setField("address_from", date)}
+                          dateFormat="MM/dd/yyyy"
+                          className="form-control"
+                          placeholderText="MM/DD/YYYY"
+                          showMonthDropdown
+                          showYearDropdown
+                          dropdownMode="select"
+                          maxDate={form.address_to && form.address_to < today ? form.address_to : today}
+                          required
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>To <span className="required">*</span></label>
+                        <DatePicker
+                          selected={form.address_to}
+                          onChange={(date) => setField("address_to", date)}
+                          dateFormat="MM/dd/yyyy"
+                          className="form-control"
+                          placeholderText="MM/DD/YYYY"
+                          showMonthDropdown
+                          showYearDropdown
+                          dropdownMode="select"
+                          minDate={form.address_from || undefined}
+                          maxDate={today}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-actions" style={{ marginTop: "1.5rem" }}>
+                      {addresses.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn-cancel"
+                          onClick={closeForm}
+                          style={{ marginRight: "0.75rem" }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      <button type="submit" className="btn-save" disabled={saving}>
+                        {saving ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Saving...
+                          </>
+                        ) : editId ? (
+                          "Update"
+                        ) : (
+                          "Submit"
+                        )}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
-            </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Footer */}
         <Footer />
       </main>
     </div>

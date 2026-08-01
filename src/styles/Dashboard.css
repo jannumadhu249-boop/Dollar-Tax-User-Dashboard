@@ -959,27 +959,51 @@
 }
 
 .referral-summary-cards {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  gap: 1.5rem;
   margin-bottom: 2rem;
+  padding: 0 2rem;
+}
+
+.summary-wrapper {
+  padding: 0 2rem;
+  /* margin-bottom: 1.5rem; */
 }
 
 .summary-card-item {
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-  padding: 1.5rem;
-  border-radius: 0.75rem;
+  /* padding: 1 1.5rem; */
+  border-radius: 8px;
   border: 2px solid #e5e7eb;
   text-align: center;
   transition: all 0.3s;
-  padding-left: 10px;
+  padding: 10px 10px 10px 10px;
+  flex: 1;
 }
 
 .summary-card-item:hover {
   border-color: #4f46e5;
   transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
+
+/* Individual Colors */
+/* .summary-card-item:nth-child(1) {
+  background: #f0f7ff;
+  border-left-color: #3b82f6;
+}
+
+.summary-card-item:nth-child(2) {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.summary-card-item:nth-child(3) {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+} */
 
 .summary-label {
   font-size: 0.875rem;

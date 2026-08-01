@@ -10,6 +10,7 @@ export const URLS = {
     GenerateEmailOtp : base_url + "v1/minimumTax/user/auth/sendEmailOtp",
     VerificationEmailOtp : base_url + "v1/minimumTax/user/auth/verifyEmailOtp",
     Login : base_url + "v1/minimumTax/user/auth/login",
+    GetProfile : base_url + "v1/minimumTax/user/auth/getMemberProfile",
     ChangePassword : base_url + "v1/minimumTax/user/auth/changePassword",
 
     //Forgot Password
@@ -58,6 +59,19 @@ export const URLS = {
 
     // Download Tax Return
     GetDownloadTaxReturn : base_url + "v1/minimumTax/user/taxReturns/getDownloadTaxReturns",
+
+    // Refer Friend
+    GetReferrals : base_url + "v1/minimumTax/user/refer/getMyReferrals",
+    ReferFriend : base_url + "v1/minimumTax/user/refer/referFriend",
+    GetReferralCode : base_url + "v1/minimumTax/user/refer/getReferralCode",
+
+    // Send Query
+    SendQuery : base_url + "v1/minimumTax/user/query/sendQuery",
+
+    // Notifications
+    GetNotificationCount : base_url + "v1/minimumTax/user/query/getNotificationCount",
+    GetNotificationsList : base_url + "v1/minimumTax/user/query/getNotifications",
+    MarkNotificationRead : base_url + "v1/minimumTax/user/query/markNotificationAsRead/",
     
 
 }
