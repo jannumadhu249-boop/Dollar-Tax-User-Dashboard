@@ -214,7 +214,7 @@
     margin-left: 280px;
   }
 
-  .sidebar.closed ~ .main-content {
+  .sidebar.closed~.main-content {
     margin-left: 0;
   }
 }
@@ -660,6 +660,7 @@
   gap: 1.5rem;
   margin-bottom: 1.5rem;
 }
+
 .form-grid-2col {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -1472,6 +1473,7 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
+
   /* Tablet adjustments */
   .form-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1491,6 +1493,7 @@
 }
 
 @media (max-width: 768px) {
+
   /* Sidebar always hidden on mobile, shown with overlay when open */
   .sidebar {
     transform: translateX(-280px) !important;
@@ -1766,7 +1769,7 @@
 
 @media (max-width: 480px) {
   /* Extra small mobile devices */
-  
+
   /* Hide page title on very small screens */
   .page-title {
     display: none;
@@ -2082,5 +2085,94 @@
 
   .header-logo {
     max-height: 35px;
+  }
+}
+
+/* Dynamic Dashboard Integration Styles */
+.welcome-banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.user-greeting {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.welcome-api-text {
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0.5rem 0 0 0;
+}
+
+.file-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #c7d2fe;
+}
+
+.file-status-badge strong {
+  color: #1e1b4b;
+  font-weight: 700;
+}
+
+.section-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 0.55rem 1.15rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.section-action-btn:hover {
+  background: #3730a3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+}
+
+.dashboard-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+  gap: 0.75rem;
+}
+
+.spinner-icon {
+  animation: spin 1s linear infinite;
+  color: #4f46e5;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }

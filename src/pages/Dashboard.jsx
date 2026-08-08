@@ -8,14 +8,60 @@ import {
   Upload,
   Calendar,
   Mail,
+  ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { getStoredUser, isEmailVerified } from "../utils/user";
 import "../styles/Dashboard.css";
+import { URLS } from "../url";
+
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+  const [dashboardError, setDashboardError] = useState(null);
   const navigate = useNavigate();
+
+  const fetchDashboardData = async () => {
+    setLoadingDashboard(true);
+    setDashboardError(null);
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(URLS.GetDashboard, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        console.warn(`GetDashboard API returned status ${response.status}`);
+        setDashboardError(`Dashboard API returned status ${response.status}`);
+        setLoadingDashboard(false);
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        setDashboardData(data.data);
+      } else {
+        setDashboardError(data.message || "Failed to load dashboard data");
+      }
+    } catch (err) {
+      console.error("Error fetching dashboard details:", err);
+      setDashboardError("Network error loading dashboard data");
+    } finally {
+      setLoadingDashboard(false);
+    }
+  };
 
   useEffect(() => {
     const loadUser = () => {
@@ -28,6 +74,7 @@ const Dashboard = () => {
     };
 
     loadUser();
+    fetchDashboardData();
 
     const handleUserUpdated = () => loadUser();
     window.addEventListener("user-updated", handleUserUpdated);
@@ -45,7 +92,7 @@ const Dashboard = () => {
     handleResize();
 
     // Add event listener
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     // Cleanup
     return () => {
@@ -55,6 +102,32 @@ const Dashboard = () => {
   }, [navigate]);
 
   if (!user) return null;
+
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return "/images/tax-preparation.svg";
+    if (imagePath.startsWith("http")) return imagePath;
+    const base = URLS.ImageUrl || "";
+    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+    const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+    return `${cleanBase}${cleanPath}`;
+  };
+
+  const getStepIcon = (index) => {
+    const icons = [
+      <FileText size={32} key="file" />,
+      <Upload size={32} key="upload" />,
+      <Calendar size={32} key="calendar" />,
+    ];
+    return icons[index % icons.length];
+  };
+
+  // Process sections: sort by order if sections exist
+  const dynamicSections =
+    dashboardData?.sections && Array.isArray(dashboardData.sections)
+      ? [...dashboardData.sections].sort(
+          (a, b) => (a.order || 0) - (b.order || 0)
+        )
+      : [];
 
   return (
     <div className="dashboard-container">
@@ -93,82 +166,72 @@ const Dashboard = () => {
           )}
 
           <div className="welcome-banner">
-            <h2>Dear {user?.name || "Balakrishna Burra"},</h2>
-            <p>
-              Welcome to MinimumTax! We truly appreciate the opportunity to
-              assist you with filing your Tax Return for TY2025. As a valued
-              client, we are dedicated to delivering the highest level of
-              service and ensuring a seamless experience.
-            </p>
-            <p>
-              You can easily track the progress of your tax return in real-time
-              via your personalized dashboard.
-            </p>
+            <div className="welcome-banner-header">
+              <h2 className="user-greeting">
+                Dear {user?.name || "Valued Client"},
+              </h2>
+              {dashboardData?.file_status && (
+                <span className="file-status-badge">
+                  File Status: <strong>{dashboardData.file_status}</strong>
+                </span>
+              )}
+            </div>
+            {dashboardData?.page_title && (
+              <p className="welcome-api-text">
+                {dashboardData.page_title}
+              </p>
+            )}
+            {dashboardData?.description && (
+              <p className="welcome-api-text">
+                {dashboardData.description}
+              </p>
+            )}
           </div>
 
           <div className="getting-started">
             <h3>To get started, please provide the information below.</h3>
 
-            <div className="steps-container">
-              {/* Step 1 */}
-              <div className="step-card">
-                <div className="step-header">
-                  <div className="step-icon step-1">
-                    <FileText size={32} />
-                  </div>
-                  <div className="step-number">1</div>
-                </div>
-                <h4>Basic Information</h4>
-                <p>
-                  Please provide your personal details, as well as information
-                  about your spouse (if married) and any dependents (such as
-                  children or others, if applicable)
-                </p>
+            {loadingDashboard ? (
+              <div className="dashboard-loading-state">
+                <Loader2 size={32} className="spinner-icon" />
+                <p>Loading dashboard sections...</p>
               </div>
-
-              {/* Step 2 */}
-              <div className="step-card">
-                <div className="step-header">
-                  <div className="step-icon step-2">
-                    <Upload size={32} />
+            ) : dynamicSections.length > 0 ? (
+              <div className="steps-container">
+                {dynamicSections.map((sec, index) => (
+                  <div className="step-card" key={sec._id || index}>
+                    <div className="step-header">
+                      <div className={`step-icon step-${(index % 3) + 1}`}>
+                        {getStepIcon(index)}
+                      </div>
+                      <div className="step-number">
+                        {sec.order !== undefined ? sec.order : index + 1}
+                      </div>
+                    </div>
+                    <h4>{sec.title}</h4>
+                    <p>{sec.description}</p>
                   </div>
-                  <div className="step-number">2</div>
-                </div>
-                <h4>Upload Tax documents</h4>
-                <p>
-                  Please upload any tax-related documents, such as W-2 forms,
-                  1099s, or any other documents you would like us to review.
-                </p>
+                ))}
               </div>
-
-              {/* Step 3 */}
-              <div className="step-card">
-                <div className="step-header">
-                  <div className="step-icon step-3">
-                    <Calendar size={32} />
-                  </div>
-                  <div className="step-number">3</div>
-                </div>
-                <h4>Schedule a Tax Consultation</h4>
-                <p>
-                  Choose a time to speak with a tax expert to ensure an
-                  accurate tax return and maximize your potential refund.
-                </p>
-              </div>
-            </div>
+            ) : null}
 
             <div className="progress-illustration">
               <img
-                src="/images/tax-preparation.svg"
-                alt="Tax Preparation"
+                src={getImageUrl(dashboardData?.banner_image)}
+                alt={dashboardData?.page_title || "Tax Preparation"}
                 className="illustration"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/images/tax-preparation.svg";
+                }}
               />
             </div>
 
             <div className="status-message">
               <p>
-                Your tax returns are currently being prepared. You can expect to
-                receive tax estimates within the next 6 to 24 hours.
+                {dashboardData?.file_status
+                  ? `Your file status is currently "${dashboardData.file_status}". Your tax returns are currently being prepared.`
+                  : "Your tax returns are currently being prepared. You can expect to receive tax estimates within the next 6 to 24 hours."}
               </p>
             </div>
           </div>
@@ -182,3 +245,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

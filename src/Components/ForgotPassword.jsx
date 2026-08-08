@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle, Eye, EyeOff, Mail, Lock, ShieldCheck } from "lucide-react";
 import { URLS } from "../url";
 
-/* ── Shared input styles (unchanged) ── */
+/* ── Shared input styles ── */
 const inputBase = {
   width: "100%",
   padding: "12px 16px 12px 44px",
@@ -53,7 +53,7 @@ const STEPS = ["email", "otp", "password"];
 // ── Validation constants ──
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;"'<>,.?/~`\\-])[A-Za-z\d!@#$%^&*()_+{}\[\]:;"'<>,.?/~`\\-]{8,}$/;
 
 const ForgotPassword = () => {
   // ── State ──
@@ -98,7 +98,7 @@ const ForgotPassword = () => {
     if (value.length < PASSWORD_MIN_LENGTH)
       return `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
     if (!PASSWORD_REGEX.test(value))
-      return "Password must contain at least one uppercase, one lowercase, one digit, and one special character.";
+      return "Password must contain at least one uppercase, one lowercase, one digit, and one special character (!@#$%^&*()_+ etc.)";
     return "";
   };
 
@@ -640,6 +640,7 @@ const ForgotPassword = () => {
                         onChange={handlePasswordChange}
                         onBlur={handlePasswordBlur}
                         onFocus={onFocus}
+                        maxLength={64}
                         style={{
                           ...inputBase,
                           paddingRight: "44px",
@@ -667,7 +668,7 @@ const ForgotPassword = () => {
                     {/* Optional hint */}
                     {newPassword && !fieldErrors.password && (
                       <div className="mt-1" style={{ fontSize: "0.78rem", color: "#6c757d" }}>
-                        Must have 8+ chars, uppercase, lowercase, digit, and special character.
+                        Must have at least 8 characters, including uppercase, lowercase, digit, and one special character (!@#$%^&*()_+ etc.).
                       </div>
                     )}
                   </div>

@@ -14,12 +14,35 @@ import {
   ClipboardList,
   FolderOpen,
 } from "lucide-react";
+import { URLS } from "../url";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false);
+  const [taxOrganizerYear, setTaxOrganizerYear] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Fetch current tax organizer year dynamically from API
+  useEffect(() => {
+    const fetchCurrentYear = async () => {
+      try {
+        const response = await fetch(URLS.GetTaxOrganizerYear, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json();
+        if (data && data.data && data.data.name) {
+          setTaxOrganizerYear(data.data.name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch tax organizer year:", error);
+      }
+    };
+    fetchCurrentYear();
+  }, []);
 
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -45,7 +68,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { icon: Users, label: "Referrals Details", path: "/dashboard/referrals" },
     { icon: Download, label: "Download Tax Returns", path: "/dashboard/download" },
     { icon: ClipboardList, label: "FBAR Questionnaire", path: "/dashboard/fbar" },
-    { icon: FolderOpen, label: "2024 Tax Organizer", path: "/dashboard/organizer" },
+    { icon: FolderOpen, label: `${taxOrganizerYear ? taxOrganizerYear : ""} Tax Organizer`, path: "/dashboard/organizer" },
   ];
 
   // Check if any submenu item is active

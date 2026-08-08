@@ -16,7 +16,7 @@ const PASSWORD_ERROR_KEYWORDS = [
 // Validation constants
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;"'<>,.?/~`\\-])[A-Za-z\d!@#$%^&*()_+{}\[\]:;"'<>,.?/~`\\-]{8,}$/;
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -329,11 +329,11 @@ const Login = () => {
                   </div>
                 )}
                 {/* Optional password hint – shows only when password is entered and no error */}
-                {formData.password && !fieldErrors.password && (
+                {/* {formData.password && !fieldErrors.password && (
                   <div className="mt-1" style={{ fontSize: "0.78rem", color: "#6c757d" }}>
                     Must have 8+ chars, uppercase, lowercase, number, and special character.
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Remember & Forgot */}
