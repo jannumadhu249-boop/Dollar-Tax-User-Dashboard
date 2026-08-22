@@ -197,7 +197,7 @@ const ScheduleTaxConsultation = () => {
           <span className="breadcrumb-current">Schedule Tax Consultation</span>
         </div>
 
-        <div className="form-container" style={{ width: "100%", padding: "0 2rem" }}>
+        <div className="form-container" style={{ width: "100%" }}>
 
           {/* ── Collapsible Schedule Form Card ───────────────────────────── */}
           {showForm && (
@@ -217,6 +217,8 @@ const ScheduleTaxConsultation = () => {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.75rem 1rem",
                   marginBottom: "1.25rem",
                 }}
               >
@@ -315,7 +317,7 @@ const ScheduleTaxConsultation = () => {
                 </div>
 
                 {/* Form Buttons */}
-                <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+                <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -347,6 +349,7 @@ const ScheduleTaxConsultation = () => {
                       alignItems: "center",
                       gap: "0.5rem",
                       cursor: saving ? "not-allowed" : "pointer",
+                      maxWidth: "100%",
                     }}
                   >
                     {saving ? (
@@ -384,6 +387,8 @@ const ScheduleTaxConsultation = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.75rem 1rem",
                 marginBottom: "1.5rem",
                 width: "100%",
               }}
@@ -407,7 +412,7 @@ const ScheduleTaxConsultation = () => {
                   alignItems: "center",
                   gap: "0.5rem",
                   cursor: "pointer",
-                  marginLeft: "auto",
+                  maxWidth: "100%",
                 }}
               >
                 {showForm ? (

@@ -1,0 +1,627 @@
+:root {
+  --dt-bg: #F8FAFC;
+  --dt-panel: #FFFFFF;
+  --dt-panel-2: #F1F5F9;
+  --dt-border: #E2E8F0;
+  --dt-border-2: #CBD5E1;
+  --dt-ink: #0F172A;
+  --dt-ink-soft: #475569;
+  --dt-ink-faint: #64748B;
+  --dt-primary: #4F46E5;
+  --dt-primary-hover: #4338CA;
+  --dt-primary-bg: rgba(79, 70, 229, 0.10);
+  --dt-teal: #0D9488;
+  --dt-teal-d: #0F766E;
+  --dt-teal-bg: rgba(13, 148, 136, 0.10);
+  --dt-gold: #D97706;
+  --dt-gold-bg: #FEF3E2;
+  --dt-blue: #2563EB;
+  --dt-blue-bg: #EFF6FF;
+  --dt-coral: #DC2626;
+  --dt-coral-bg: #FEF2F2;
+  --dt-green: #16A34A;
+  --dt-green-bg: #F0FDF4;
+}
+
+.dt-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.dt-display {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ---------- Main Dashboard Inner Container ---------- */
+.dt-dashboard-inner {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 32px 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--dt-ink);
+  box-sizing: border-box;
+}
+
+/* ---------- Page Header ---------- */
+.dt-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.dt-crumb {
+  font-size: 12px;
+  color: var(--dt-ink-faint);
+  margin: 0 0 4px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.dt-page-head h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--dt-ink);
+  letter-spacing: -0.02em;
+}
+
+.dt-page-head p {
+  font-size: 13.5px;
+  color: var(--dt-ink-soft);
+  margin: 4px 0 0;
+}
+
+/* Primary CTA button styled with the app's standard primary color */
+.dt-cta-primary {
+  background: linear-gradient(135deg, var(--dt-primary) 0%, var(--dt-primary-hover) 100%);
+  color: #FFFFFF;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  transition: all 0.2s ease;
+}
+
+.dt-cta-primary:hover {
+  background: var(--dt-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  color: #FFFFFF;
+}
+
+.dt-cta-primary:active {
+  transform: translateY(0);
+}
+
+.dt-cta-primary svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---------- Notification Banner ---------- */
+.dt-verify-banner {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+}
+
+.dt-verify-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #92400E;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.dt-verify-banner-btn {
+  background: #F59E0B;
+  color: #FFFFFF;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.dt-verify-banner-btn:hover {
+  background: #D97706;
+}
+
+/* ---------- Metrics Grid ---------- */
+.dt-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.dt-metric {
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.dt-metric:hover {
+  border-color: var(--dt-border-2);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.dt-metric .dt-k {
+  font-size: 11.5px;
+  color: var(--dt-ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.dt-metric .dt-row2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dt-metric .dt-v {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--dt-ink);
+  letter-spacing: -0.02em;
+}
+
+.dt-trend {
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.dt-trend.up {
+  color: var(--dt-teal);
+}
+
+.dt-trend.down {
+  color: var(--dt-coral);
+}
+
+.dt-trend.muted {
+  color: var(--dt-ink-faint);
+}
+
+.dt-trend svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------- 2-Column Grid Layout ---------- */
+.dt-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+}
+
+.dt-panel {
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+}
+
+.dt-panel:hover {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.dt-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.dt-panel-head h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--dt-ink);
+  letter-spacing: -0.01em;
+}
+
+.dt-panel-head .dt-tag {
+  font-size: 11.5px;
+  color: var(--dt-ink-faint);
+  font-weight: 500;
+}
+
+/* ---------- Progress Chart Section ---------- */
+.dt-chart-wrap {
+  position: relative;
+  height: 140px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.dt-chart-wrap svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.dt-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--dt-ink-faint);
+  margin-top: 6px;
+  font-weight: 500;
+  padding: 0 2px;
+}
+
+/* ---------- Stepper Component ---------- */
+.dt-stepper {
+  display: flex;
+  align-items: center;
+  margin: 24px 0 4px;
+  position: relative;
+}
+
+.dt-snode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 30%;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.dt-snode:hover .dt-scircle {
+  transform: scale(1.05);
+}
+
+.dt-scircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1.5px solid var(--dt-border-2);
+  color: var(--dt-ink-faint);
+  background: var(--dt-panel-2);
+  transition: all 0.2s ease;
+}
+
+.dt-scircle.done {
+  background: var(--dt-teal);
+  border-color: var(--dt-teal);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+}
+
+.dt-scircle.active {
+  border-color: var(--dt-gold);
+  color: var(--dt-gold);
+  background: var(--dt-panel);
+  box-shadow: 0 0 0 3px var(--dt-gold-bg);
+}
+
+.dt-slabel {
+  font-size: 11px;
+  color: var(--dt-ink-faint);
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.dt-sline {
+  flex: 1;
+  height: 2px;
+  background: var(--dt-border-2);
+  position: relative;
+  top: -12px;
+}
+
+.dt-sline.done {
+  background: var(--dt-teal);
+}
+
+/* ---------- Tasks (Intake Items) ---------- */
+.dt-task {
+  display: flex;
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--dt-border);
+  transition: background 0.15s;
+}
+
+.dt-task:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+.dt-ticon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dt-ticon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.dt-ticon.emerald {
+  background: var(--dt-teal-bg);
+  color: var(--dt-teal);
+}
+
+.dt-ticon.gold {
+  background: var(--dt-gold-bg);
+  color: var(--dt-gold);
+}
+
+.dt-ticon.blue {
+  background: var(--dt-primary-bg);
+  color: var(--dt-primary);
+}
+
+.dt-task h3 {
+  font-size: 14.5px;
+  font-weight: 600;
+  margin: 0 0 5px;
+  color: var(--dt-ink);
+}
+
+.dt-task p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--dt-ink-soft);
+  margin: 0 0 8px;
+  max-width: 54ch;
+}
+
+.dt-task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dt-pill {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.dt-pill.done {
+  background: var(--dt-teal-bg);
+  color: var(--dt-teal);
+}
+
+.dt-pill.todo {
+  background: var(--dt-gold-bg);
+  color: var(--dt-gold);
+}
+
+.dt-pill.not-started {
+  background: var(--dt-gold-bg);
+  color: var(--dt-gold);
+}
+
+.dt-link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dt-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dt-link:hover {
+  color: var(--dt-primary-hover);
+  text-decoration: underline;
+}
+
+/* ---------- Donut Chart Section ---------- */
+.dt-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.dt-donut-legend .dt-li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--dt-ink-soft);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.dt-donut-legend .dt-li:last-child {
+  margin-bottom: 0;
+}
+
+.dt-donut-legend .dt-sw {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ---------- Contact Section ---------- */
+.dt-contact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dt-contact .dt-av {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--dt-gold-bg);
+  color: var(--dt-gold);
+  font-weight: 700;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.dt-contact h4 {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 0 0 2px;
+  color: var(--dt-ink);
+}
+
+.dt-contact p {
+  font-size: 12px;
+  color: var(--dt-ink-soft);
+  margin: 0;
+}
+
+.dt-contact-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: linear-gradient(135deg, var(--dt-primary) 0%, var(--dt-primary-hover) 100%);
+  color: #FFFFFF;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
+.dt-contact-btn:hover {
+  background: var(--dt-primary-hover);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+}
+
+.dt-contact-btn:active {
+  transform: translateY(0);
+}
+
+/* ---------- Activity Section ---------- */
+.dt-activity {
+  display: flex;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid var(--dt-border);
+}
+
+.dt-activity:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.dt-activity .dt-adot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dt-ink-faint);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.dt-activity .dt-adot.on {
+  background: var(--dt-teal);
+  box-shadow: 0 0 0 2px var(--dt-teal-bg);
+}
+
+.dt-activity p {
+  font-size: 12.5px;
+  margin: 0;
+  color: var(--dt-ink-soft);
+  font-weight: 500;
+}
+
+.dt-activity .dt-t {
+  font-size: 11px;
+  color: var(--dt-ink-faint);
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+/* ---------- Responsive Breakpoints ---------- */
+@media (max-width: 1024px) {
+  .dt-grid {
+    grid-template-columns: 1fr;
+  }
+  .dt-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dt-dashboard-inner {
+    padding: 0 0 24px 0;
+  }
+  .dt-metrics {
+    grid-template-columns: 1fr;
+  }
+  .dt-panel {
+    padding: 18px 16px;
+  }
+}

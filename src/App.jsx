@@ -3,6 +3,7 @@ import Login from "./Components/Login";
 import Register from "./Components/Register";
 import ForgotPassword from "./Components/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
+import ClientDashboard from "./pages/ClientDashboard";
 import Taxpayer from "./pages/Taxpayer";
 import Spouse from "./pages/Spouse";
 import Dependent from "./pages/Dependent";
@@ -16,9 +17,10 @@ import ReferFriend from "./pages/ReferFriend";
 import DownloadTaxReturns from "./pages/DownloadTaxReturns";
 import FBARQuestionnaire from "./pages/FBARQuestionnaire";
 import TaxOrganizer from "./pages/TaxOrganizer";
-import MyTaxSummary from "./pages/MyTaxSummary";
+import MyTaxSummary from "./pages/MyTaxSummary/MyTaxSummary";
 import SendQuery from "./pages/SendQuery";
 import VerifyEmail from "./pages/VerifyEmail";
+import MakePayment from "./pages/MakePayment";
 
 function App() {
   return (
@@ -28,7 +30,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<ClientDashboard />} />
+        <Route path="/client-dashboard" element={<ClientDashboard />} />
+        <Route path="/dashboard-legacy" element={<Dashboard />} />
         <Route path="/dashboard/basic-info/taxpayer" element={<Taxpayer />} />
         <Route path="/dashboard/basic-info/spouse" element={<Spouse />} />
         <Route path="/dashboard/basic-info/dependent" element={<Dependent />} />
@@ -42,6 +46,7 @@ function App() {
         <Route path="/dashboard/download" element={<DownloadTaxReturns />} />
         <Route path="/dashboard/fbar" element={<FBARQuestionnaire />} />
         <Route path="/dashboard/organizer" element={<TaxOrganizer />} />
+        <Route path="/dashboard/make-payment" element={<MakePayment />} />
         <Route path="/send-query" element={<SendQuery />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />

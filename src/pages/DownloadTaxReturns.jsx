@@ -159,7 +159,7 @@ const DownloadTaxReturns = () => {
                             <td>{item.original_name}</td>
                             <td>
                               <button
-                                className="download-btn"
+                                className="btn btn-md btn-primary"
                                 onClick={() =>
                                   handleDownload(item.file_path, item.original_name)
                                 }

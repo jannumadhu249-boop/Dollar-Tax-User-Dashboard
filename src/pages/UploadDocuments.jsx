@@ -23,6 +23,7 @@ const UploadDocuments = () => {
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedDocTypeId, setSelectedDocTypeId] = useState("");
+  const [fileName, setFileName] = useState("");
   const [documentTypes, setDocumentTypes] = useState([]);
   const [documents, setDocuments] = useState([]);
 
@@ -155,11 +156,17 @@ const UploadDocuments = () => {
       return;
     }
 
+    if (!fileName.trim()) {
+      setError("Please enter a name for the file.");
+      return;
+    }
+
     setUploading(true);
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("document_type_id", selectedDocTypeId);
+      formData.append("file_name", fileName.trim());
       formData.append("document", selectedFile);
 
       const res = await fetch(URLS.UploadDocuments, {
@@ -186,6 +193,7 @@ const UploadDocuments = () => {
         setSuccessMsg(data.message || "Document uploaded successfully!");
         setSelectedFile(null);
         setSelectedDocTypeId("");
+        setFileName("");
         setShowUploadForm(false);
         fetchDocuments();
       } else {
@@ -340,7 +348,7 @@ const UploadDocuments = () => {
           <span className="breadcrumb-current">Upload Tax Documents</span>
         </div>
 
-        <div className="form-container" style={{ width: "100%", padding: "0 2rem" }}>
+        <div className="form-container" style={{ width: "100%" }}>
 
           {/* ── 1. Upload Form Collapsible Card ──────────────────────────────── */}
           {showUploadForm && (
@@ -353,6 +361,7 @@ const UploadDocuments = () => {
                 marginBottom: "1.5rem",
                 boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
                 border: "1px solid #e2e8f0",
+                width: "100%",
               }}
             >
               <div
@@ -360,6 +369,8 @@ const UploadDocuments = () => {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.75rem 1rem",
                   marginBottom: "1.25rem",
                 }}
               >
@@ -406,6 +417,24 @@ const UploadDocuments = () => {
                     </select>
                   </div>
 
+                  {/* File Name Input */}
+                  <div className="form-group">
+                    <label style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.5rem", display: "block" }}>
+                      Enter name of the file <span style={{ color: "#e63946" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Enter file name"
+                      value={fileName}
+                      onChange={(e) => {
+                        setFileName(e.target.value);
+                        if (error) setError("");
+                      }}
+                      disabled={uploading}
+                    />
+                  </div>
+
                   {/* Document File Input */}
                   <div className="form-group">
                     <label style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.5rem", display: "block" }}>
@@ -435,7 +464,7 @@ const UploadDocuments = () => {
                 </div>
 
                 {/* Form Buttons */}
-                <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+                <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
                   <button
                     type="button"
                     onClick={() => setShowUploadForm(false)}
@@ -463,6 +492,7 @@ const UploadDocuments = () => {
                       alignItems: "center",
                       gap: "0.5rem",
                       cursor: uploading ? "not-allowed" : "pointer",
+                      maxWidth: "100%",
                     }}
                   >
                     {uploading ? (
@@ -499,6 +529,8 @@ const UploadDocuments = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.75rem 1rem",
                 marginBottom: "1.5rem",
                 width: "100%",
               }}
@@ -522,7 +554,7 @@ const UploadDocuments = () => {
                   alignItems: "center",
                   gap: "0.5rem",
                   cursor: "pointer",
-                  marginLeft: "auto",
+                  maxWidth: "100%",
                 }}
               >
                 {showUploadForm ? (

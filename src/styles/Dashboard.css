@@ -1853,11 +1853,11 @@
 
   /* Forms */
   .form-container {
-    padding: 0.75rem;
+    padding: 0.75rem !important;
   }
 
   .form-card {
-    padding: 1rem;
+    padding: 1rem !important;
   }
 
   .form-title {

@@ -54,7 +54,7 @@ const Login = () => {
       isValid = false;
     } else if (!PASSWORD_REGEX.test(password)) {
       errors.password =
-        "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.";
+        "Invalid Password";
       isValid = false;
     }
 

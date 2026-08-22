@@ -16,7 +16,7 @@ import WelcomeModal from "../Components/WelcomeModal";
 import "../styles/Dashboard.css";
 import "../styles/ClientDashboard.css";
 
-const Dashboard = () => {
+const ClientDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
@@ -57,7 +57,7 @@ const Dashboard = () => {
         }
       }
     } catch (err) {
-      console.error("Error fetching profile in Dashboard:", err);
+      console.error("Error fetching profile in ClientDashboard:", err);
     }
   };
 
@@ -127,7 +127,7 @@ const Dashboard = () => {
   // Calculate days to tax deadline (e.g., April 15)
   const calculateDaysToDeadline = () => {
     const today = new Date();
-    const deadline = new Date(today.getFullYear(), 3, 15); // April 15
+    const deadline = new Date(today.getFullYear(), 3, 15);
     if (today > deadline) {
       deadline.setFullYear(deadline.getFullYear() + 1);
     }
@@ -636,4 +636,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default ClientDashboard;

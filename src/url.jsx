@@ -36,7 +36,7 @@ export const URLS = {
     // Address Tax Payer
     GetAddressTaxPayer : base_url + "v1/minimumTax/user/address/getAddress",
     GetStates : base_url + "v1/minimumTax/user/address/getStates",
-    CreateAddressTaxPayer : base_url + "v1/minimumTax/user/address/createAddress",
+    CreateAddressTaxPayer : base_url + "v1/minimumTax/user/address/createAddress", 
     GetByIdAddressTaxPayer : base_url + "v1/minimumTax/user/address/getAddressById/",
     UpdateAddressTaxPayer : base_url + "v1/minimumTax/user/address/updateAddress/",
     DeleteAddressTaxPayer : base_url + "v1/minimumTax/user/address/deleteAddress/",
@@ -78,6 +78,9 @@ export const URLS = {
     
     // Tax Organizer year
     GetTaxOrganizerYear : base_url + "v1/minimumTax/admin/years/getCurrentYear",
+
+    // My Tax Summary
+    GetMyTaxSummary : base_url + "v1/minimumTax/user/taxReturns/getMyTaxSummary",
     
 
 }

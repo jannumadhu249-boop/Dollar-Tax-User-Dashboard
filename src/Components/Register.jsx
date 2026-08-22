@@ -295,9 +295,6 @@ const Register = () => {
                     />
                   </div>
                 </div>
-                <small className="text-muted" style={{ fontSize: "0.75rem" }}>
-                  Phone number must be exactly 10 digits.
-                </small>
               </div>
 
               {/* Password */}

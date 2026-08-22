@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ClipboardList,
   FolderOpen,
+  CreditCard,
 } from "lucide-react";
 import { URLS } from "../url";
 
@@ -20,10 +21,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const [basicInfoOpen, setBasicInfoOpen] = useState(false);
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false);
   const [taxOrganizerYear, setTaxOrganizerYear] = useState(null);
+  const [fileStatus, setFileStatus] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Fetch current tax organizer year dynamically from API
+  // Fetch current tax organizer year and user file status dynamically from API
   useEffect(() => {
     const fetchCurrentYear = async () => {
       try {
@@ -41,10 +43,64 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         console.error("Failed to fetch tax organizer year:", error);
       }
     };
+
+    const fetchUserFileStatus = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        
+        // Check profile API
+        const response = await fetch(URLS.GetProfile, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        if (data && data.data) {
+          const status = data.data.file_status;
+          const statusName =
+            typeof status === "string"
+              ? status
+              : status?.name || "";
+          setFileStatus(statusName);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user file status in Sidebar:", error);
+      }
+    };
+
     fetchCurrentYear();
+    fetchUserFileStatus();
+
+    // Listen for user updates
+    const handleUserUpdated = () => fetchUserFileStatus();
+    window.addEventListener("user-updated", handleUserUpdated);
+    return () => window.removeEventListener("user-updated", handleUserUpdated);
   }, []);
 
-  const menuItems = [
+  // Helper to check if file status is Payment Pending E-Filing or Paper Filing
+  const isPaymentPending = (status) => {
+    if (!status) return false;
+    const norm = status.toLowerCase().trim();
+    const isEfiling =
+      norm.includes("payment pending efiling") ||
+      norm.includes("payment pending e-filing") ||
+      norm.includes("payment pending e filing") ||
+      (norm.includes("payment pending") && (norm.includes("efiling") || norm.includes("e-filing")));
+
+    const isPaperFiling =
+      norm.includes("payment pending paper filing") ||
+      norm.includes("payment pending paper-filing") ||
+      (norm.includes("payment pending") && norm.includes("paper"));
+
+    return isEfiling || isPaperFiling;
+  };
+
+  const showMakePaymentItem = isPaymentPending(fileStatus);
+
+  const baseMenuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     {
       icon: FileText,
@@ -65,11 +121,24 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       path: "/dashboard/schedule",
     },
     { icon: TrendingUp, label: "My Tax Summary", path: "/dashboard/tax-summary" },
+  ];
+
+  if (showMakePaymentItem) {
+    baseMenuItems.push({
+      icon: CreditCard,
+      label: "Make Payment",
+      path: "/dashboard/make-payment",
+    });
+  }
+
+  baseMenuItems.push(
     { icon: Users, label: "Referrals Details", path: "/dashboard/referrals" },
     { icon: Download, label: "Download Tax Returns", path: "/dashboard/download" },
     { icon: ClipboardList, label: "FBAR Questionnaire", path: "/dashboard/fbar" },
-    { icon: FolderOpen, label: `${taxOrganizerYear ? taxOrganizerYear : ""} Tax Organizer`, path: "/dashboard/organizer" },
-  ];
+    { icon: FolderOpen, label: `${taxOrganizerYear ? taxOrganizerYear : ""} Tax Organizer`, path: "/dashboard/organizer" }
+  );
+
+  const menuItems = baseMenuItems;
 
   // Check if any submenu item is active
   const isBasicInfoActive = menuItems[1].submenu.some(

@@ -26,6 +26,10 @@ const Taxpayer = () => {
   const [referFullName, setReferFullName] = useState("");
   const [referEmail, setReferEmail] = useState("");
 
+  // Dynamic states list from API
+  const [statesList, setStatesList] = useState([]);
+  const [statesLoading, setStatesLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     first_name: "",
     middle_name: "",
@@ -44,6 +48,16 @@ const Taxpayer = () => {
     state: "",
     zipcode: "",
   });
+
+  // ─── Validations ─────────────────────────────────────────
+
+  const isValidPhone = (phone) => {
+    return /^\d{10}$/.test(phone.replace(/\D/g, ''));
+  };
+
+  const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   // ─── Auto‑dismiss alerts ─────────────────────────────────────────
   const alertTimeoutRef = useRef(null);
@@ -86,6 +100,7 @@ const Taxpayer = () => {
   // ─── Fetch taxpayer data on mount ──────────────────────────────
   useEffect(() => {
     fetchTaxpayerData();
+    fetchStates();
   }, []);
 
   const fetchTaxpayerData = async () => {
@@ -147,6 +162,33 @@ const Taxpayer = () => {
     }
   };
 
+  // ─── Fetch States from API ───────────────────────────────────────
+  const fetchStates = async () => {
+    setStatesLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(URLS.GetStates, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const resData = await response.json();
+
+      if (resData.success && Array.isArray(resData.data)) {
+        setStatesList(resData.data);
+      } else if (Array.isArray(resData.data)) {
+        setStatesList(resData.data);
+      }
+    } catch (err) {
+      console.error("Error fetching states:", err);
+    } finally {
+      setStatesLoading(false);
+    }
+  };
+
   // ─── Handlers ────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -170,6 +212,20 @@ const Taxpayer = () => {
     if (successMsg) setSuccessMsg("");
   };
 
+  const handlePhoneChange = (e, fieldName) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    const limited = raw.slice(0, 10);
+    let formatted = limited;
+    if (limited.length > 6) {
+      formatted = limited.slice(0, 3) + ' ' + limited.slice(3, 6) + ' ' + limited.slice(6);
+    } else if (limited.length > 3) {
+      formatted = limited.slice(0, 3) + ' ' + limited.slice(3);
+    }
+    setFormData(prev => ({ ...prev, [fieldName]: formatted }));
+    if (error) setError("");
+    if (successMsg) setSuccessMsg("");
+  };
+
   const formatDate = (date) => {
     if (!date) return "";
     if (typeof date === "string") return date.split("T")[0];
@@ -185,6 +241,24 @@ const Taxpayer = () => {
     setError("");
     setSuccessMsg("");
     setLoading(true);
+
+    // --- Validation ---
+    const phone = formData.contact_number.replace(/\D/g, '');
+    const altPhone = formData.alternate_number.replace(/\D/g, '');
+    const email = formData.email.trim();
+
+    if (!isValidPhone(phone)) {
+      setError("Contact Number must be exactly 10 digits.");
+      return;
+    }
+    if (altPhone.length > 0 && !isValidPhone(altPhone)) {
+      setError("Alternate Number must be exactly 10 digits.");
+      return;
+    }
+    if (email && !isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
 
     const payload = {
       first_name: formData.first_name,
@@ -280,16 +354,7 @@ const Taxpayer = () => {
     "CST",
     "IST",
   ];
-  const stateOptions = [
-    "Select State",
-    "California",
-    "New York",
-    "Texas",
-    "Florida",
-    "Telangana",
-    "Washington",
-    "Illinois",
-  ];
+
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
@@ -620,7 +685,7 @@ const Taxpayer = () => {
                       placeholder="Enter Phone Number"
                       name="contact_number"
                       value={formData.contact_number}
-                      onChange={handleChange}
+                      onChange={(e) => handlePhoneChange(e, "contact_number")}
                     />
                   </div>
                   <div className="form-group">
@@ -631,7 +696,7 @@ const Taxpayer = () => {
                       placeholder="Enter Alternate Number"
                       name="alternate_number"
                       value={formData.alternate_number}
-                      onChange={handleChange}
+                      onChange={(e) => handlePhoneChange(e, "alternate_number")}
                     />
                   </div>
                   <div className="form-group">
@@ -676,18 +741,39 @@ const Taxpayer = () => {
                       name="state"
                       value={formData.state}
                       onChange={handleChange}
+                      disabled={statesLoading}
                     >
-                      {!stateOptions.includes(formData.state) &&
-                        formData.state && (
+                      <option value="">
+                        {statesLoading ? "Loading states..." : "Select State"}
+                      </option>
+                      {formData.state &&
+                        !statesList.some(
+                          (s) =>
+                            (s.name || s.state_name || s) === formData.state
+                        ) && (
                           <option value={formData.state}>
                             {formData.state}
                           </option>
                         )}
-                      {stateOptions.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
+                      {statesList.map((stateItem, idx) => {
+                        const stateName =
+                          typeof stateItem === "string"
+                            ? stateItem
+                            : stateItem.name ||
+                              stateItem.state_name ||
+                              stateItem.title ||
+                              stateItem.label ||
+                              "";
+                        const stateId =
+                          typeof stateItem === "string"
+                            ? stateItem
+                            : stateItem._id || stateName;
+                        return (
+                          <option key={stateId || idx} value={stateName}>
+                            {stateName}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                   <div className="form-group">
