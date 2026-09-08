@@ -118,6 +118,7 @@ const SendQuery = () => {
                       <th>S.No</th>
                       <th>Your Query</th>
                       <th>Admin Reply</th>
+                      <th>Type</th>
                       <th>Status</th>
                       <th>Date</th>
                     </tr>
@@ -127,9 +128,10 @@ const SendQuery = () => {
                       <tr key={q._id}>
                         <td>{index + 1}</td>
                         <td>{q.message || "—"}</td>
-                        <td>{q.reply || "No reply yet"}</td>
+                        <td>{q.reply}</td>
+                        <td>{q.type}</td>
                         <td>
-                          <span
+                          {/* <span
                             className={`badge ${
                               q.status === "Resolved"
                                 ? "bg-success"
@@ -137,9 +139,9 @@ const SendQuery = () => {
                                 ? "bg-warning text-dark"
                                 : "bg-secondary"
                             }`}
-                          >
-                            {q.status || "Pending"}
-                          </span>
+                          > */}
+                            {q.status}
+                          {/* </span> */}
                         </td>
                         <td>
                           {q.createdAt

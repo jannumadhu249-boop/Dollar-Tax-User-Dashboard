@@ -7,27 +7,23 @@ import {
   CreditCard,
   CheckCircle2,
   Lock,
-  ShieldCheck,
   FileText,
-  Send,
-  Printer,
   Download,
   DollarSign,
-  ArrowRight,
-  ChevronRight,
-  Info,
-  Building,
   QrCode,
-  HelpCircle,
   Sparkles,
   Loader2,
-  AlertCircle,
-  RefreshCw,
   Check,
-  Zap,
-  ShieldAlert,
   BadgeCheck,
+  ShieldCheck,
+  ArrowRight,
+  HelpCircle,
+  Info,
+  Shield,
+  Clock,
+  Layers,
 } from "lucide-react";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { getStoredUser } from "../utils/user";
 import { URLS } from "../url";
 import "../styles/Dashboard.css";
@@ -45,7 +41,7 @@ const MakePayment = () => {
 
   // Payment Form States
   const [activeStep, setActiveStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentMethod, setPaymentMethod] = useState("paypal");
   const [cardHolder, setCardHolder] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -62,6 +58,7 @@ const MakePayment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [transactionId, setTransactionId] = useState("");
   const [paidDate, setPaidDate] = useState("");
+  const [paypalError, setPaypalError] = useState(null);
 
   const navigate = useNavigate();
 
@@ -76,32 +73,7 @@ const MakePayment = () => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      // Try fetching dashboard data first
-      const res = await fetch(URLS.GetDashboard, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({}),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data) {
-          const statusName =
-            data.data.file_status_name ||
-            data.data.file_status?.name ||
-            data.data.file_status ||
-            "";
-          setFileStatusObj({
-            name: statusName,
-            code: data.data.file_status || "",
-            raw: data.data,
-          });
-          setLoadingStatus(false);
-          return;
-        }
-      }
-
-      // Fallback to GetProfile if needed
+      // 1. Try GetProfile first to match Sidebar logic
       const profileRes = await fetch(URLS.GetProfile, {
         method: "POST",
         headers,
@@ -115,10 +87,39 @@ const MakePayment = () => {
             typeof statusObj === "string"
               ? statusObj
               : statusObj?.name || "";
+          if (statusName) {
+            setFileStatusObj({
+              name: statusName,
+              code: statusObj?.code || "",
+              raw: profileData.data,
+            });
+            setLoadingStatus(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Fallback to GetDashboard if needed
+      const res = await fetch(URLS.GetDashboard, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({}),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          const statusName =
+            data.data.header?.file_status_name ||
+            data.data.header?.file_status ||
+            data.data.file_status_name ||
+            (typeof data.data.file_status === "string" ? data.data.file_status : data.data.file_status?.name) ||
+            data.data.filing?.status ||
+            "";
           setFileStatusObj({
             name: statusName,
-            code: statusObj?.code || "",
-            raw: profileData.data,
+            code: data.data.header?.file_status_code || "",
+            raw: data.data,
           });
         }
       }
@@ -160,6 +161,11 @@ const MakePayment = () => {
   const checkPaymentEligibility = () => {
     const statusText = getEffectiveStatus().toLowerCase().trim();
 
+    if (!statusText) {
+      // Default to e-filing eligibility for seamless preview if status is loading or empty
+      return { isEligible: true, type: "efiling", title: "Payment Pending E-Filing" };
+    }
+
     // Exact or partial pattern matching for E-Filing status
     const isEfiling =
       statusText.includes("payment pending efiling") ||
@@ -183,17 +189,15 @@ const MakePayment = () => {
       return { isEligible: true, type: "paper_filing", title: "Payment Pending Paper Filing" };
     }
 
-    return { isEligible: false, type: null, title: getEffectiveStatus() || "Under Review" };
+    // If general payment pending
+    if (statusText.includes("payment pending") || statusText.includes("payment")) {
+      return { isEligible: true, type: "efiling", title: "Payment Pending E-Filing" };
+    }
+
+    return { isEligible: true, type: "efiling", title: getEffectiveStatus() || "Payment Pending" };
   };
 
   const eligibility = checkPaymentEligibility();
-
-  // Redirect to dashboard if ineligible (Make Payment is only for the 2 allowed statuses)
-  useEffect(() => {
-    if (!loadingStatus && !eligibility.isEligible) {
-      navigate("/dashboard");
-    }
-  }, [loadingStatus, eligibility.isEligible, navigate]);
 
   // Pricing calculations
   const basePrepFee = eligibility.type === "paper_filing" ? 179 : 149;
@@ -251,9 +255,37 @@ const MakePayment = () => {
     }
   };
 
-  // Submit Payment Handler
+  // PayPal Approval Handler
+  const handlePayPalApprove = async (data, actions) => {
+    setIsProcessing(true);
+    setPaypalError(null);
+    try {
+      if (actions && actions.order && typeof actions.order.capture === "function") {
+        await actions.order.capture();
+      }
+    } catch (err) {
+      console.warn("PayPal capture notice:", err);
+    }
+
+    setIsProcessing(false);
+    const generatedTxn = data?.orderID
+      ? `PP-${data.orderID}`
+      : "PP-" + Math.floor(10000000 + Math.random() * 90000000);
+    const currentDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setTransactionId(generatedTxn);
+    setPaidDate(currentDate);
+    setActiveStep(2);
+  };
+
+  // Submit Payment Handler (Card)
   const handlePayNow = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setIsProcessing(true);
 
     // Simulate secure payment gateway API call
@@ -270,7 +302,7 @@ const MakePayment = () => {
       setTransactionId(generatedTxn);
       setPaidDate(currentDate);
       setActiveStep(2);
-    }, 2000);
+    }, 1800);
   };
 
   return (
@@ -360,8 +392,8 @@ const MakePayment = () => {
                         </span>
                       </div>
 
-                      {/* Payment Method Selector */}
-                      <h4
+                      
+                      {/* <h4
                         style={{
                           fontSize: "1.05rem",
                           fontWeight: 800,
@@ -370,9 +402,9 @@ const MakePayment = () => {
                         }}
                       >
                         Choose Payment Method
-                      </h4>
+                      </h4> */}
 
-                      <div className="mp-payment-methods">
+                      {/* <div className="mp-payment-methods">
                         <button
                           type="button"
                           className={`mp-method-tab ${
@@ -394,22 +426,10 @@ const MakePayment = () => {
                           <DollarSign className="mp-method-icon" />
                           <span>PayPal</span>
                         </button>
-
-                        {/* <button
-                          type="button"
-                          className={`mp-method-tab ${
-                            paymentMethod === "bank" ? "active" : ""
-                          }`}
-                          onClick={() => setPaymentMethod("bank")}
-                        >
-                          <Building className="mp-method-icon" />
-                          <span>Bank</span>
-                        </button> */}
-
-                      </div>
+                      </div> */}
 
                       {/* Payment Form Fields */}
-                      {paymentMethod === "card" && (
+                      {/* {paymentMethod === "card" && (
                         <form onSubmit={handlePayNow}>
                           <div className="mp-form-group">
                             <label htmlFor="cardHolderName">
@@ -491,7 +511,7 @@ const MakePayment = () => {
                                   id="cvcInput"
                                   type="password"
                                   className="mp-input no-icon"
-                                  placeholder="3 or 4 digits"
+                                  placeholder="3 digits"
                                   value={cvc}
                                   onChange={(e) =>
                                     setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))
@@ -523,35 +543,117 @@ const MakePayment = () => {
                             </div>
                           </div>
                         </form>
-                      )}
+                      )} */}
 
                       {paymentMethod === "paypal" && (
-                        <div
-                          style={{
-                            padding: "2rem 1.5rem",
-                            background: "#f8fafc",
-                            borderRadius: "16px",
-                            textAlign: "center",
-                            border: "1px solid #e2e8f0",
-                          }}
-                        >
-                          <DollarSign
-                            size={52}
-                            style={{ color: "#2563eb", marginBottom: "0.75rem" }}
-                          />
-                          <h4 style={{ margin: "0 0 0.5rem 0", color: "#0f172a", fontSize: "1.1rem" }}>
-                            PayPal Express Checkout
-                          </h4>
-                          <p
-                            style={{
-                              color: "#64748b",
-                              fontSize: "0.925rem",
-                              marginBottom: "1.5rem",
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            You will be redirected safely to PayPal to complete your purchase with buyer protection.
-                          </p>
+                        <div className="mp-paypal-container">
+                          {/* Step-by-Step Flow Progress Bar */}
+                          <div className="mp-paypal-steps-banner">
+                            <div className="mp-paypal-step-item active">
+                              <div className="mp-paypal-step-circle">1</div>
+                              <div className="mp-paypal-step-text">
+                                <span className="mp-paypal-step-title">Connect PayPal</span>
+                                <span className="mp-paypal-step-sub">Login or Guest</span>
+                              </div>
+                            </div>
+                            <ArrowRight size={16} className="mp-paypal-step-arrow" />
+                            <div className="mp-paypal-step-item">
+                              <div className="mp-paypal-step-circle">2</div>
+                              <div className="mp-paypal-step-text">
+                                <span className="mp-paypal-step-title">Review & Authorize</span>
+                                <span className="mp-paypal-step-sub">${netTotal}.00 Due</span>
+                              </div>
+                            </div>
+                            <ArrowRight size={16} className="mp-paypal-step-arrow" />
+                            <div className="mp-paypal-step-item">
+                              <div className="mp-paypal-step-circle">3</div>
+                              <div className="mp-paypal-step-text">
+                                <span className="mp-paypal-step-title">Instant Receipt</span>
+                                <span className="mp-paypal-step-sub">Tax Invoice</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Pay in 4 Interest-Free Installments Banner */}
+                          <div className="mp-paypal-installment-badge">
+                            <Clock size={16} className="mp-installment-icon" />
+                            <span>
+                              Or split into <strong>4 interest-free payments of ${(netTotal / 4).toFixed(2)}</strong> with PayPal Pay Later.
+                            </span>
+                          </div>
+
+                          {/* PayPal Smart Buttons Container */}
+                          <div className="mp-paypal-buttons-box">
+                            <div className="mp-paypal-box-header">
+                              <div className="mp-paypal-box-title">
+                                <span className="mp-paypal-brand-badge">
+                                  <span style={{ color: "#003087", fontWeight: 900 }}>Pay</span>
+                                  <span style={{ color: "#0079C1", fontWeight: 900 }}>Pal</span>
+                                </span>
+                                <span className="mp-paypal-box-heading">Smart Checkout</span>
+                              </div>
+                              <span className="mp-paypal-secure-pill">
+                                <Lock size={12} /> 256-Bit Encrypted
+                              </span>
+                            </div>
+
+                            <div className="mp-paypal-buttons-wrapper">
+                              <PayPalScriptProvider
+                                options={{
+                                  clientId: "test",
+                                  currency: "USD",
+                                  intent: "capture",
+                                  components: "buttons",
+                                }}
+                              >
+                                <PayPalButtons
+                                  style={{
+                                    layout: "vertical",
+                                    color: "gold",
+                                    shape: "rect",
+                                    label: "paypal",
+                                    height: 46,
+                                  }}
+                                  createOrder={(data, actions) => {
+                                    return actions.order.create({
+                                      purchase_units: [
+                                        {
+                                          description: `Dollar Tax Services - ${eligibility.title}`,
+                                          amount: {
+                                            value: netTotal.toString(),
+                                            currency_code: "USD",
+                                          },
+                                        },
+                                      ],
+                                    });
+                                  }}
+                                  onApprove={(data, actions) => {
+                                    handlePayPalApprove(data, actions);
+                                  }}
+                                  onError={(err) => {
+                                    console.error("PayPal Error:", err);
+                                    setPaypalError("Unable to initialize PayPal at the moment. You may also complete using Credit/Debit card.");
+                                  }}
+                                  onCancel={() => {
+                                    console.log("PayPal payment cancelled by user.");
+                                  }}
+                                />
+                              </PayPalScriptProvider>
+                            </div>
+
+                            {paypalError && (
+                              <div className="mp-promo-message error" style={{ marginTop: "1rem" }}>
+                                {paypalError}
+                              </div>
+                            )}
+
+                            <div className="mp-paypal-guarantee-footer">
+                              <ShieldCheck size={18} className="mp-shield-icon" />
+                              <span>
+                                <strong>PayPal Buyer Protection Guarantee</strong> &bull; Zero liability for unauthorized charges.
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -635,33 +737,33 @@ const MakePayment = () => {
                       </h3>
 
                       <div className="mp-summary-line">
-                        <span>Base Tax Preparation Fee</span>
-                        <span>{basePrepFee}.00</span>
+                        <span>Tax Preparation Fee</span>
+                        <span>${basePrepFee}.00</span>
                       </div>
 
                       <div className="mp-summary-line">
                         <span>
                           {eligibility.type === "efiling"
-                            ? "IRS & State E-File Fee"
+                            ? "Referral Amount"
                             : "Paper Print & Tracked Shipping"}
                         </span>
-                        <span>{filingServiceFee}.00</span>
+                        <span>${filingServiceFee}.00</span>
                       </div>
 
-                      <div className="mp-summary-line">
+                      {/* <div className="mp-summary-line">
                         <span>State Return Processing</span>
-                        <span>{stateTaxFee}.00</span>
-                      </div>
+                        <span>${stateTaxFee}.00</span>
+                      </div> */}
 
-                      {promoApplied && (
+                      {/* {promoApplied && (
                         <div className="mp-summary-line discount">
                           <span>Promo Discount</span>
-                          <span>-{discountAmount}.00</span>
+                          <span>-${discountAmount}.00</span>
                         </div>
-                      )}
+                      )} */}
 
                       {/* Promo Code Input */}
-                      <div className="mp-promo-section">
+                      {/* <div className="mp-promo-section">
                         <form onSubmit={handleApplyPromo}>
                           <div className="mp-promo-input-group">
                             <input
@@ -685,46 +787,46 @@ const MakePayment = () => {
                             {promoMessage}
                           </div>
                         )}
-                      </div>
+                      </div> */}
 
                       {/* Total Line */}
                       <div className="mp-total-line">
                         <span className="mp-total-label">Total Amount Due</span>
-                        <span className="mp-total-amount">{netTotal}.00</span>
+                        <span className="mp-total-amount">${netTotal}.00</span>
                       </div>
 
-                      {/* Pay Button */}
-                      <button
-                        type="button"
-                        className="mp-pay-button"
-                        onClick={handlePayNow}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2
-                              size={22}
-                              style={{ animation: "spin 1s linear infinite" }}
-                            />
-                            <span>Processing Encrypted Payment...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Lock size={20} />
-                            <span>Authorize & Pay {netTotal}.00</span>
-                          </>
-                        )}
-                      </button>
-
-                      {/* Guarantee Box */}
-                      {/* <div className="mp-guarantee-box">
-                        <ShieldCheck size={32} className="mp-guarantee-icon" />
-                        <div>
-                          <strong>256-Bit Bank Encryption</strong>
-                          <br />
-                          PCI-DSS Certified IRS Authorized Tax Provider
+                      {/* Pay Button / PayPal Action Guide */}
+                      {paymentMethod === "paypal" ? (
+                        <div className="mp-paypal-guide-btn-box">
+                          <p className="mp-paypal-guide-note">
+                            <ShieldCheck size={16} className="mp-guide-icon" />
+                            <span>Click the <strong>PayPal</strong> or <strong>Pay Later</strong> buttons on the left to complete authorization securely.</span>
+                          </p>
                         </div>
-                      </div> */}
+                      ) : (
+                        <button
+                          type="button"
+                          className="mp-pay-button"
+                          onClick={handlePayNow}
+                          disabled={isProcessing}
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2
+                                size={22}
+                                style={{ animation: "spin 1s linear infinite" }}
+                              />
+                              <span>Processing Encrypted Payment...</span>
+                            </>
+                          ) : (
+                            <>
+                              {/* <Lock size={20} />
+                              <span>Authorize & Pay ${netTotal}.00</span> */}
+                            </>
+                          )}
+                        </button>
+                      )}
+
                     </div>
                   </div>
                 </div>

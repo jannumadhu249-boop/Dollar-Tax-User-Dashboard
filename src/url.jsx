@@ -74,7 +74,8 @@ export const URLS = {
     MarkNotificationRead : base_url + "v1/minimumTax/user/query/markNotificationAsRead/",
 
     // Dashboard
-    GetDashboard : base_url + "v1/minimumTax/user/dashboard/getDashboard",
+    GetDashboard : base_url + "v1/minimumTax/user/userDashboard/get",
+    SendMessage : base_url + "v1/minimumTax/user/userDashboard/sendDashboardMessage",
     
     // Tax Organizer year
     GetTaxOrganizerYear : base_url + "v1/minimumTax/admin/years/getCurrentYear",

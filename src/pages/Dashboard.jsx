@@ -136,15 +136,332 @@ const Dashboard = () => {
     return diffDays > 0 ? diffDays : 62;
   };
 
-  const displayName = user?.name || user?.first_name || "Kids Tub";
-  const displayFileNo = user?.file_no || "101595";
+  // Extract initials for Point of Contact avatar
+  const getInitials = (name) => {
+    if (!name) return "TP";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Helper for dynamic pill badge styles
+  const getStatusPillClass = (status) => {
+    if (!status) return "dt-pill not-started";
+    const s = status.toLowerCase();
+    if (s === "complete" || s === "completed" || s === "done") return "dt-pill done";
+    if (s === "in progress" || s === "awaiting upload" || s === "pending") return "dt-pill todo";
+    return "dt-pill not-started";
+  };
+
+  // Extract response sub-objects
+  const header = dashboardData?.header;
+  const cards = dashboardData?.cards;
+
+  // Dynamic values mapped from dashboard API data
+  const displayName = header?.name || dashboardData?.member?.name || user?.name || user?.first_name || "Taxpayer";
+  const displayFileNo = header?.file_no || dashboardData?.member?.file_no || user?.file_no || "101595";
+  const displayTaxYear = header?.year || dashboardData?.tax_year?.name || "2026";
+  const displayFilingType = header?.filing_type;
   const displayStatus =
+    header?.file_status_name ||
+    header?.file_status ||
+    dashboardData?.filing?.status ||
+    dashboardData?.member?.file_status ||
     user?.file_status?.name ||
-    dashboardData?.file_status_name ||
-    "registered only";
-  const preparerName = dashboardData?.preparer || "Katta H.";
-  const daysDeadline = calculateDaysToDeadline();
+    "Registered";
+
+  // Filing Progress Card
+  const filingProgressPercentage = cards?.filing_progress?.percentage ?? 33;
+  const filingProgressStep = cards?.filing_progress?.step || "Step 1 of 3";
+  const filingProgressLabel = cards?.filing_progress?.label || "Filing progress";
+
+  // Days to Deadline Card
+  const daysDeadline =
+    cards?.days_to_deadline?.days != null
+      ? cards.days_to_deadline.days
+      : dashboardData?.deadline?.days_remaining != null
+      ? dashboardData.deadline.days_remaining
+      : calculateDaysToDeadline();
+  const daysDeadlineLabel = cards?.days_to_deadline?.label || "Days to deadline";
+  const daysDeadlineStatus = cards?.days_to_deadline?.status || "Counting down";
+
+  // Documents Card
+  const docCount = cards?.documents?.count ?? dashboardData?.documents?.count ?? 0;
+  const docStatus = cards?.documents?.status || dashboardData?.documents?.status || "Awaiting upload";
+  const docLabel = cards?.documents?.label || "Documents";
+
+  // Preparer Card
+  const preparer = cards?.preparer || dashboardData?.preparer;
+  const preparerName = preparer?.name || "Not Assigned";
+  const preparerStatus = preparer?.status || (preparer?.name ? "Assigned" : "Pending");
+  const preparerLabel = cards?.preparer?.label || "Preparer";
+  const isPreparerAssigned = Boolean(preparer?.name && preparer?.name !== "Not Assigned");
+
+  // Point of Contact
+  const poc = dashboardData?.point_of_contact || cards?.preparer || dashboardData?.preparer;
+  const pocName = poc?.name || "";
+  const pocFirstName = poc?.name ? poc.name.trim().split(/\s+/)[0] : "";
+  const pocPhone = poc?.contact_number || "";
+  const pocEmail = poc?.email || "";
+  const pocInitials = getInitials(pocName);
+
+  // Intake step statuses
+  const intakeSteps = dashboardData?.complete_your_intake?.steps;
+  const getIntakeStepStatus = (key, defaultVal) => {
+    if (intakeSteps && Array.isArray(intakeSteps)) {
+      const stepObj = intakeSteps.find((s) => s.key === key);
+      if (stepObj?.status) return stepObj.status;
+    }
+    return defaultVal;
+  };
+
+  const basicInfoStatus =
+    getIntakeStepStatus("basic_information", dashboardData?.intake?.basic_information?.status || "Complete");
+  const documentsStatus =
+    getIntakeStepStatus("documents", dashboardData?.intake?.documents?.status || "Awaiting upload");
+  const consultationStatus =
+    getIntakeStepStatus("consultation", dashboardData?.intake?.consultation?.status || "Not started");
+
+  const completedIntakeCount =
+    dashboardData?.complete_your_intake?.completed ??
+    [basicInfoStatus, documentsStatus, consultationStatus].filter(
+      (s) => s?.toLowerCase() === "complete" || s?.toLowerCase() === "completed"
+    ).length;
+
   const emailVerified = isEmailVerified(user);
+
+  // Helper to render Dashboard Content (or Fallback Intake Panel)
+  const renderMainContentPanel = () => {
+    const content = dashboardData?.dashboard_content;
+
+    if (content && content.page_title) {
+      const blocks = content.page_title
+        .split(/\r?\n\r?\n/)
+        .map((b) => b.trim())
+        .filter(Boolean);
+
+      const introParagraphs = [];
+      const stepItems = [];
+
+      blocks.forEach((block) => {
+        const match = block.match(/^(\d+)[\.\s]+([\s\S]*)/);
+        if (match) {
+          const stepNum = match[1];
+          const rest = match[2];
+          const lines = rest.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          const stepTitle = lines[0] || `Step ${stepNum}`;
+          const stepDesc = lines.slice(1).join(" ");
+          stepItems.push({ stepNum, title: stepTitle, description: stepDesc });
+        } else {
+          introParagraphs.push(block);
+        }
+      });
+
+      return (
+        <div className="dt-panel">
+          <div className="dt-panel-head">
+            <h2>Overview & Guidelines</h2>
+          </div>
+
+          {content.banner_image && (
+            <div style={{ marginBottom: "16px", borderRadius: "8px", overflow: "hidden" }}>
+              <img
+                src={
+                  content.banner_image.startsWith("http")
+                    ? content.banner_image
+                    : `${URLS.ImageUrl}${content.banner_image}`
+                }
+                alt="Dashboard Banner"
+                style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }}
+              />
+            </div>
+          )}
+
+          {introParagraphs.length > 0 && (
+            <div style={{ marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+              {introParagraphs.map((para, idx) => (
+                <p key={idx} style={{ fontSize: "14px", lineHeight: "1.6", color: "#374151", margin: 0 }}>
+                  {para}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {stepItems.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {stepItems.map((item, idx) => {
+                let navTarget = "/dashboard/basic-info/taxpayer";
+                let navText = "Review details →";
+                let iconClass = "emerald";
+                let IconComp = User;
+
+                const lowerTitle = item.title.toLowerCase();
+                if (lowerTitle.includes("upload") || item.stepNum === "2") {
+                  navTarget = "/dashboard/upload";
+                  navText = "Upload now →";
+                  iconClass = "gold";
+                  IconComp = Upload;
+                } else if (
+                  lowerTitle.includes("schedule") ||
+                  lowerTitle.includes("consultation") ||
+                  item.stepNum === "3"
+                ) {
+                  navTarget = "/dashboard/schedule";
+                  navText = "Schedule now →";
+                  iconClass = "blue";
+                  IconComp = Calendar;
+                }
+
+                const currentStatus =
+                  item.stepNum === "1"
+                    ? basicInfoStatus
+                    : item.stepNum === "2"
+                    ? documentsStatus
+                    : consultationStatus;
+
+                return (
+                  <div className="dt-task" key={idx}>
+                    <div className={`dt-ticon ${iconClass}`}>
+                      <IconComp size={16} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="dt-task-row">
+                        <h3>
+                          {item.stepNum}. {item.title}
+                        </h3>
+                        <span className={getStatusPillClass(currentStatus)}>
+                          {currentStatus}
+                        </span>
+                      </div>
+                      {item.description && <p>{item.description}</p>}
+                      <span
+                        className="dt-link"
+                        onClick={() => navigate(navTarget)}
+                      >
+                        {navText}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* Dynamic sections if present */}
+          {Array.isArray(content.sections) && content.sections.length > 0 && (
+            <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              {content.sections.map((sec, sIdx) => (
+                <div
+                  key={sIdx}
+                  style={{
+                    padding: "12px",
+                    background: "#F9FAFB",
+                    borderRadius: "8px",
+                    border: "1px solid #E5E7EB",
+                  }}
+                >
+                  {sec.title && <h4 style={{ margin: "0 0 6px 0", fontSize: "14px", fontWeight: 600 }}>{sec.title}</h4>}
+                  {sec.content && <p style={{ margin: 0, fontSize: "13px", color: "#4B5563" }}>{sec.content}</p>}
+                  {sec.image && (
+                    <img
+                      src={sec.image.startsWith("http") ? sec.image : `${URLS.ImageUrl}${sec.image}`}
+                      alt={sec.title || "Section"}
+                      style={{ marginTop: "8px", maxWidth: "100%", borderRadius: "4px" }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Default Fallback: Complete your intake panel
+    return (
+      <div className="dt-panel">
+        <div className="dt-panel-head">
+          <h2>Complete your intake</h2>
+          <span className="dt-tag">{completedIntakeCount} of 3 done</span>
+        </div>
+
+        {/* Task 1: Basic Information */}
+        <div className="dt-task">
+          <div className="dt-ticon emerald">
+            <User size={16} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="dt-task-row">
+              <h3>Basic information</h3>
+              <span className={getStatusPillClass(basicInfoStatus)}>
+                {basicInfoStatus}
+              </span>
+            </div>
+            <p>
+              Personal details, spouse information if married, and
+              dependents information for any children or others.
+            </p>
+            <span
+              className="dt-link"
+              onClick={() => navigate("/dashboard/basic-info/taxpayer")}
+            >
+              Review details →
+            </span>
+          </div>
+        </div>
+
+        {/* Task 2: Upload Tax Related Documents */}
+        <div className="dt-task">
+          <div className="dt-ticon gold">
+            <Upload size={16} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="dt-task-row">
+              <h3>Upload tax related documents</h3>
+              <span className={getStatusPillClass(documentsStatus)}>
+                {documentsStatus}
+              </span>
+            </div>
+            <p>
+              W-2 forms, 1099s, or any other documents you'd like your
+              preparer to consider.
+            </p>
+            <span
+              className="dt-link"
+              onClick={() => navigate("/dashboard/upload")}
+            >
+              Upload now →
+            </span>
+          </div>
+        </div>
+
+        {/* Task 3: Schedule for Tax Notes */}
+        <div className="dt-task">
+          <div className="dt-ticon blue">
+            <Calendar size={16} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="dt-task-row">
+              <h3>Schedule for tax notes</h3>
+              <span className={getStatusPillClass(consultationStatus)}>
+                {consultationStatus}
+              </span>
+            </div>
+            <p>
+              Pick a time to talk with our expert about an accurate return
+              and maximum eligible benefits.
+            </p>
+            <span
+              className="dt-link"
+              onClick={() => navigate("/dashboard/schedule")}
+            >
+              Schedule now →
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="dashboard-container">
@@ -190,7 +507,7 @@ const Dashboard = () => {
                 <p className="dt-crumb">Dashboard / Overview</p>
                 <h1 className="dt-display">Dear {displayName}</h1>
                 <p>
-                  Account {displayFileNo} · TY2025 return · {displayStatus}
+                  Account {displayFileNo} · TY{displayTaxYear} return {displayFilingType ? `(${displayFilingType}) ` : ""}· {displayStatus}
                 </p>
               </div>
               <button
@@ -205,11 +522,11 @@ const Dashboard = () => {
 
             {/* Metrics Row (4 Cards) */}
             <section className="dt-metrics">
-              {/* Metric 1 */}
+              {/* Metric 1 - Filing Progress */}
               <div className="dt-metric">
-                <p className="dt-k">Filing progress</p>
+                <p className="dt-k">{filingProgressLabel}</p>
                 <div className="dt-row2">
-                  <p className="dt-v">33%</p>
+                  <p className="dt-v">{filingProgressPercentage}%</p>
                   <span className="dt-trend up">
                     <svg
                       viewBox="0 0 24 24"
@@ -219,16 +536,16 @@ const Dashboard = () => {
                     >
                       <path d="M6 15l6-6 6 6"></path>
                     </svg>
-                    Step 1 of 3
+                    {filingProgressStep}
                   </span>
                 </div>
               </div>
 
-              {/* Metric 2 */}
+              {/* Metric 2 - Days to Deadline */}
               <div className="dt-metric">
-                <p className="dt-k">Days to deadline</p>
+                <p className="dt-k">{daysDeadlineLabel}</p>
                 <div className="dt-row2">
-                  <p className="dt-v">{daysDeadline}</p>
+                  <p className="dt-v">{daysDeadline ?? "--"}</p>
                   <span className="dt-trend down">
                     <svg
                       viewBox="0 0 24 24"
@@ -238,28 +555,32 @@ const Dashboard = () => {
                     >
                       <path d="M6 9l6 6 6-6"></path>
                     </svg>
-                    Counting down
+                    {daysDeadlineStatus}
                   </span>
                 </div>
               </div>
 
-              {/* Metric 3 */}
+              {/* Metric 3 - Documents */}
               <div className="dt-metric">
-                <p className="dt-k">Documents</p>
+                <p className="dt-k">{docLabel}</p>
                 <div className="dt-row2">
-                  <p className="dt-v">0</p>
-                  <span className="dt-trend muted">Awaiting upload</span>
+                  <p className="dt-v">{docCount}</p>
+                  <span className={`dt-trend ${docCount > 0 ? "up" : "muted"}`}>
+                    {docStatus}
+                  </span>
                 </div>
               </div>
 
-              {/* Metric 4 */}
+              {/* Metric 4 - Preparer */}
               <div className="dt-metric">
-                <p className="dt-k">Preparer</p>
+                <p className="dt-k">{preparerLabel}</p>
                 <div className="dt-row2">
                   <p className="dt-v" style={{ fontSize: "16px" }}>
                     {preparerName}
                   </p>
-                  <span className="dt-trend up">Assigned</span>
+                  <span className={`dt-trend ${isPreparerAssigned ? "up" : "muted"}`}>
+                    {preparerStatus}
+                  </span>
                 </div>
               </div>
             </section>
@@ -272,7 +593,7 @@ const Dashboard = () => {
                 <div className="dt-panel">
                   <div className="dt-panel-head">
                     <h2>Return progress</h2>
-                    <span className="dt-tag">TY2025 · updated today</span>
+                    <span className="dt-tag">TY{displayTaxYear} · updated today</span>
                   </div>
 
                   {/* Area Line Chart with Gradient */}
@@ -394,82 +715,8 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Panel 2: Complete Your Intake */}
-                <div className="dt-panel">
-                  <div className="dt-panel-head">
-                    <h2>Complete your intake</h2>
-                    <span className="dt-tag">1 of 3 done</span>
-                  </div>
-
-                  {/* Task 1: Basic Information */}
-                  <div className="dt-task">
-                    <div className="dt-ticon emerald">
-                      <User size={16} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="dt-task-row">
-                        <h3>Basic information</h3>
-                        <span className="dt-pill done">Complete</span>
-                      </div>
-                      <p>
-                        Personal details, spouse information if married, and
-                        dependents information for any children or others.
-                      </p>
-                      <span
-                        className="dt-link"
-                        onClick={() => navigate("/dashboard/basic-info/taxpayer")}
-                      >
-                        Review details →
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Task 2: Upload Tax Related Documents */}
-                  <div className="dt-task">
-                    <div className="dt-ticon gold">
-                      <Upload size={16} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="dt-task-row">
-                        <h3>Upload tax related documents</h3>
-                        <span className="dt-pill todo">In progress</span>
-                      </div>
-                      <p>
-                        W-2 forms, 1099s, or any other documents you'd like your
-                        preparer to consider.
-                      </p>
-                      <span
-                        className="dt-link"
-                        onClick={() => navigate("/dashboard/upload")}
-                      >
-                        Upload now →
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Task 3: Schedule for Tax Notes */}
-                  <div className="dt-task">
-                    <div className="dt-ticon blue">
-                      <Calendar size={16} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="dt-task-row">
-                        <h3>Schedule for tax notes</h3>
-                        <span className="dt-pill not-started">Not started</span>
-                      </div>
-                      <p>
-                        Pick a time to talk with our expert about an accurate return
-                        and maximum eligible benefits.
-                      </p>
-                      <span
-                        className="dt-link"
-                        onClick={() => navigate("/dashboard/schedule")}
-                      >
-                        Schedule now →
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                {/* Panel 2: Dashboard Content in place of Intake */}
+                {renderMainContentPanel()}
               </div>
 
               {/* Right Column (310px) */}
@@ -490,7 +737,7 @@ const Dashboard = () => {
                         stroke="#EEEFF3"
                         strokeWidth="10"
                       ></circle>
-                      {/* Teal segment (Done: 33% = 75 dash on ~226 perimeter) */}
+                      {/* Teal segment (Done: scaled by filingProgressPercentage) */}
                       <circle
                         cx="44"
                         cy="44"
@@ -498,21 +745,8 @@ const Dashboard = () => {
                         fill="none"
                         stroke="#02A19C"
                         strokeWidth="10"
-                        strokeDasharray="75 151"
+                        strokeDasharray={`${(filingProgressPercentage / 100) * 226.19} 226.19`}
                         strokeDashoffset="0"
-                        strokeLinecap="round"
-                        transform="rotate(-90 44 44)"
-                      ></circle>
-                      {/* Gold segment (In Progress: ~17% = 38 dash) */}
-                      <circle
-                        cx="44"
-                        cy="44"
-                        r="36"
-                        fill="none"
-                        stroke="#D97706"
-                        strokeWidth="10"
-                        strokeDasharray="38 151"
-                        strokeDashoffset="-75"
                         strokeLinecap="round"
                         transform="rotate(-90 44 44)"
                       ></circle>
@@ -526,7 +760,7 @@ const Dashboard = () => {
                         fontWeight="700"
                         fill="#14161C"
                       >
-                        33%
+                        {filingProgressPercentage}%
                       </text>
                       <text
                         x="44"
@@ -546,21 +780,21 @@ const Dashboard = () => {
                           className="dt-sw"
                           style={{ background: "var(--dt-teal)" }}
                         ></span>
-                        <span>Done · 1 step</span>
+                        <span>Done · {dashboardData?.complete_your_intake?.completed ?? completedIntakeCount} step(s)</span>
                       </div>
                       <div className="dt-li">
                         <span
                           className="dt-sw"
                           style={{ background: "var(--dt-gold)" }}
                         ></span>
-                        <span>In progress · 1</span>
+                        <span>In progress · {dashboardData?.complete_your_intake?.in_progress ?? 0}</span>
                       </div>
                       <div className="dt-li">
                         <span
                           className="dt-sw"
                           style={{ background: "#E7E8EC" }}
                         ></span>
-                        <span>Remaining · 1</span>
+                        <span>Remaining · {dashboardData?.complete_your_intake?.not_started ?? (3 - completedIntakeCount)}</span>
                       </div>
                     </div>
                   </div>
@@ -572,10 +806,11 @@ const Dashboard = () => {
                     <h2>Point of contact</h2>
                   </div>
                   <div className="dt-contact">
-                    <div className="dt-av">KH</div>
+                    <div className="dt-av">{pocInitials}</div>
                     <div>
-                      <h4>Katta Harshitha</h4>
-                      <p>Tax preparer · +1 (828) 229-2979</p>
+                      <h4>{pocName}</h4>
+                      {pocPhone && <p>{pocPhone}</p>}
+                      {pocEmail && <p style={{ fontSize: "12px", color: "#6B7280", marginTop: "2px" }}>{pocEmail}</p>}
                     </div>
                   </div>
                   <button
@@ -583,7 +818,7 @@ const Dashboard = () => {
                     className="dt-contact-btn"
                     onClick={() => setShowQueryModal(true)}
                   >
-                    Message Katta
+                    Message {pocFirstName}
                   </button>
                 </div>
 
@@ -592,20 +827,42 @@ const Dashboard = () => {
                   <div className="dt-panel-head" style={{ marginBottom: "4px" }}>
                     <h2>Recent activity</h2>
                   </div>
-                  <div className="dt-activity">
-                    <div className="dt-adot on"></div>
-                    <div>
-                      <p>Basic information submitted</p>
-                      <p className="dt-t">Wednesday, 2:14 PM</p>
-                    </div>
-                  </div>
-                  <div className="dt-activity">
-                    <div className="dt-adot"></div>
-                    <div>
-                      <p>Account registered</p>
-                      <p className="dt-t">Monday, 9:02 AM</p>
-                    </div>
-                  </div>
+                  {dashboardData?.recent_activity && dashboardData.recent_activity.length > 0 ? (
+                    dashboardData.recent_activity.map((activity, index) => (
+                      <div className="dt-activity" key={index}>
+                        <div className={`dt-adot ${index === 0 ? "on" : ""}`}></div>
+                        <div>
+                          <p>{activity.title || activity.message || activity.description || "Activity updated"}</p>
+                          <p className="dt-t">
+                            {activity.date
+                              ? new Date(activity.date).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })
+                              : activity.time || "Recent"}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="dt-activity">
+                        <div className="dt-adot on"></div>
+                        <div>
+                          <p>Basic information {basicInfoStatus.toLowerCase()}</p>
+                          <p className="dt-t">Updated</p>
+                        </div>
+                      </div>
+                      <div className="dt-activity">
+                        <div className="dt-adot"></div>
+                        <div>
+                          <p>Account registered</p>
+                          <p className="dt-t">Status: {displayStatus}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
