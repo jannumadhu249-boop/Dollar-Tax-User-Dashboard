@@ -3,10 +3,16 @@ import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle, User, Mail, Phone, Globe, Lock } from "lucide-react";
 import { URLS } from "../url";
 
+// Validation constants (matching Login component)
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;"'<>,.?/~`\\-])[A-Za-z\d!@#$%^&*()_+{}\[\]:;"'<>,.?/~`\\-]{8,}$/;
+
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -20,6 +26,19 @@ const Register = () => {
   });
   const navigate = useNavigate();
 
+  const validatePassword = (pwd) => {
+    if (!pwd) {
+      return "Password is required.";
+    }
+    if (pwd.length < PASSWORD_MIN_LENGTH) {
+      return `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
+    }
+    if (!PASSWORD_REGEX.test(pwd)) {
+      return "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.";
+    }
+    return "";
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -27,6 +46,15 @@ const Register = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
     if (error) setError("");
+    if (name === "password" && passwordError) {
+      setPasswordError("");
+    }
+  };
+
+  const handlePasswordBlur = () => {
+    if (!formData.password) return;
+    const pwdErr = validatePassword(formData.password);
+    setPasswordError(pwdErr);
   };
 
   const handleSubmit = async (e) => {
@@ -42,6 +70,10 @@ const Register = () => {
       setError("Email is required.");
       return;
     }
+    if (!emailRegex.test(formData.email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     if (!formData.contact_number.trim()) {
       setError("Phone number is required.");
       return;
@@ -52,12 +84,10 @@ const Register = () => {
       setError("Phone number must be exactly 10 digits.");
       return;
     }
-    if (!formData.password) {
-      setError("Password is required.");
-      return;
-    }
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    const pwdErr = validatePassword(formData.password);
+    if (pwdErr) {
+      setError(pwdErr);
+      setPasswordError(pwdErr);
       return;
     }
     if (!formData.terms) {
@@ -303,25 +333,42 @@ const Register = () => {
                   Password <span style={{ color: "#e63946" }}>*</span>
                 </label>
                 <div className="auth-field-wrap">
-                  <span className="auth-icon"><Lock size={16} /></span>
+                  <span className="auth-icon" style={{ color: passwordError ? "#dc3545" : undefined }}>
+                    <Lock size={16} />
+                  </span>
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    className="form-control"
+                    className={`form-control${passwordError ? " is-invalid" : ""}`}
                     placeholder="Min 8 characters"
                     value={formData.password}
                     onChange={handleChange}
+                    onBlur={handlePasswordBlur}
                     style={{ paddingRight: "44px" }}
                     required
-                    minLength="8"
                   />
                   <button type="button" className="eye-btn" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <Eye size={17} /> : <EyeOff size={17} />}
                   </button>
                 </div>
-                <small className="text-muted" style={{ fontSize: "0.75rem" }}>
-                  Password must be at least 8 characters.
-                </small>
+                {passwordError ? (
+                  <div className="d-flex align-items-center mt-1" style={{ gap: "5px" }}>
+                    <svg width="13" height="13" viewBox="0 0 20 20" fill="#dc3545">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span style={{ fontSize: "0.8rem", color: "#dc3545", fontWeight: "500" }}>
+                      {passwordError}
+                    </span>
+                  </div>
+                ) : (
+                  <small className="text-muted" style={{ fontSize: "0.75rem" }}>
+                    Must have 8+ characters, uppercase, lowercase, number, and special character.
+                  </small>
+                )}
               </div>
 
               {/* Terms */}

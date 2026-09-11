@@ -270,12 +270,241 @@
   font-weight: 500;
 }
 
+/* ---------- Overview Banner ---------- */
+.dt-overview-banner {
+  position: relative;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--dt-border);
+  background: #f8fafc;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dt-overview-banner-bg {
+  position: absolute;
+  inset: -15px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(24px) saturate(1.2);
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.dt-overview-banner img {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+}
+
+.dt-overview-banner-fallback {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dt-ink-faint);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---------- Advanced Return Progress ---------- */
+.dt-status-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border: 1px solid var(--dt-border);
+}
+
+.dt-status-hero-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dt-ink-faint);
+  font-weight: 600;
+}
+
+.dt-status-hero h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--dt-ink);
+}
+
+.dt-status-code {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--dt-primary);
+  background: var(--dt-primary-bg);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.dt-status-phase-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.dt-phase-track {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dt-phase-segment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dt-phase-segment-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dt-phase-segment.done .dt-phase-segment-bar {
+  background: var(--phase-color, var(--dt-teal));
+}
+
+.dt-phase-segment.active .dt-phase-segment-bar {
+  background: var(--phase-color, #ef4c23);
+  box-shadow: 0 0 0 3px rgba(239, 76, 35, 0.18);
+}
+
+.dt-phase-segment span {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--dt-ink-faint);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.dt-phase-segment.active span,
+.dt-phase-segment.done span {
+  color: var(--dt-ink);
+}
+
+.dt-status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dt-status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.dt-status-pill.current {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fdba74;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.15);
+}
+
+.dt-overview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.dt-overview-copy p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--dt-ink-soft);
+}
+
+.dt-pipeline-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.dt-pipeline-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6366f1 0%, #ef4c23 55%, #0d9488 100%);
+  transition: width 0.35s ease;
+}
+
+.dt-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 6px;
+  margin: 14px 0 16px;
+}
+
+.dt-status-chip {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 5px 6px;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.dt-status-chip.done {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.dt-status-chip.current {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #c2410c;
+  box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.25);
+}
+
+.dt-status-chip.upcoming {
+  opacity: 0.85;
+}
+
 /* ---------- Progress Chart Section ---------- */
 .dt-chart-wrap {
   position: relative;
   height: 140px;
   margin-bottom: 6px;
   width: 100%;
+  background: linear-gradient(180deg, rgba(239, 76, 35, 0.04) 0%, rgba(239, 76, 35, 0) 100%);
+  border-radius: 10px;
 }
 
 .dt-chart-wrap svg {
@@ -307,8 +536,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 0 0 auto;
-  width: 30%;
+  flex: 1;
+  min-width: 60px;
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -745,5 +974,20 @@
   }
   .dt-panel {
     padding: 18px 16px;
+  }
+  .dt-phase-track {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 12px;
+  }
+  .dt-status-grid {
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 5px;
+  }
+  .dt-status-chip {
+    font-size: 9px;
+    padding: 4px 5px;
+  }
+  .dt-overview-banner {
+    height: 180px;
   }
 }

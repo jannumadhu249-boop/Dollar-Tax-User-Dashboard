@@ -1,44 +1,38 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../styles/NotificationDropdown.css";
-import { URLS } from "../url";
+import {
+  fetchNotifications,
+  isNotificationUnread,
+  markNotificationsAsRead,
+} from "../utils/notifications";
 
 const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [count, setCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // ── Fetch unread notification count ──
-  const fetchCount = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const response = await fetch(URLS.GetNotificationCount, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setCount(data.count || 0);
-      }
-    } catch (err) {
-      console.error("Error fetching notification count:", err);
-    }
-  };
-
-  // Initial fetch and periodic polling every
-  useEffect(() => {
-    fetchCount();
-    const interval = setInterval(fetchCount, 60000);
-    return () => clearInterval(interval);
+  const refreshNotifications = useCallback(async () => {
+    const items = await fetchNotifications();
+    setNotifications(items);
+    setCount(items.filter(isNotificationUnread).length);
   }, []);
 
-  // ── Close dropdown on outside click ──
+  useEffect(() => {
+    refreshNotifications();
+    const interval = setInterval(refreshNotifications, 60000);
+    const handleUpdated = () => refreshNotifications();
+
+    window.addEventListener("notifications-updated", handleUpdated);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("notifications-updated", handleUpdated);
+    };
+  }, [refreshNotifications]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -49,17 +43,33 @@ const NotificationDropdown = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ── When dropdown opens, refresh count ──
   const handleToggle = async () => {
-    const newState = !isOpen;
-    setIsOpen(newState);
-    if (newState) {
-      await fetchCount(); // refresh count on open
+    const opening = !isOpen;
+    setIsOpen(opening);
+
+    if (opening) {
+      const items = await fetchNotifications();
+      setNotifications(items);
+      const unreadCount = items.filter(isNotificationUnread).length;
+      setCount(unreadCount);
+
+      if (unreadCount > 0) {
+        await markNotificationsAsRead(items);
+        setCount(0);
+        setNotifications(items.map((item) => ({ ...item, is_read: true, isRead: true, read: true })));
+      }
     }
   };
 
-  const handleViewQueries = () => {
+  const handleViewQueries = async () => {
     setIsOpen(false);
+    if (notifications.length > 0) {
+      await markNotificationsAsRead(notifications);
+    } else {
+      const items = await fetchNotifications();
+      await markNotificationsAsRead(items);
+    }
+    setCount(0);
     navigate("/send-query");
   };
 
@@ -70,7 +80,7 @@ const NotificationDropdown = () => {
         onClick={handleToggle}
       >
         <Bell size={20} />
-        {count > 0 && <span className="badge">{count}</span>}
+        {count > 0 && <span className="badge">{count > 99 ? "99+" : count}</span>}
       </button>
 
       {isOpen && (

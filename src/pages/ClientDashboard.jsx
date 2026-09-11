@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../Components/Sidebar";
 import Header from "../Components/Header";
@@ -15,10 +15,61 @@ import {
   Check
 } from "lucide-react";
 import { getStoredUser, isEmailVerified } from "../utils/user";
+import {
+  FILING_PHASES,
+  FILE_STATUS_PIPELINE,
+  getPipelineIndex,
+  getPipelineProgressPercentage,
+  resolveFilingStatusInfo,
+} from "../utils/filingStatus";
+import { getMediaUrlCandidates, resolveMediaUrl } from "../utils/media";
 import { URLS } from "../url";
 import WelcomeModal from "../Components/WelcomeModal";
 import "../styles/Dashboard.css";
 import "../styles/ClientDashboard.css";
+
+const OverviewBanner = ({ imagePath, alt }) => {
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const candidates = useMemo(() => getMediaUrlCandidates(imagePath), [imagePath]);
+
+  useEffect(() => {
+    setCandidateIndex(0);
+    setFailed(false);
+  }, [imagePath]);
+
+  if (!imagePath || !candidates.length) return null;
+
+  if (failed) {
+    return (
+      <div className="dt-overview-banner dt-overview-banner-fallback">
+        <span>Status banner unavailable</span>
+      </div>
+    );
+  }
+
+  const currentCandidate = candidates[candidateIndex];
+
+  return (
+    <div className="dt-overview-banner">
+      <div
+        className="dt-overview-banner-bg"
+        style={{ backgroundImage: `url(${currentCandidate})` }}
+      />
+      <img
+        src={currentCandidate}
+        alt={alt}
+        onError={() => {
+          if (candidateIndex < candidates.length - 1) {
+            setCandidateIndex((prev) => prev + 1);
+          } else {
+            setFailed(true);
+          }
+        }}
+      />
+    </div>
+  );
+};
 
 const ClientDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -88,6 +139,10 @@ const ClientDashboard = () => {
         const data = await res.json();
         if (data.success && data.data) {
           setDashboardData(data.data);
+        } else if (data.data) {
+          setDashboardData(data.data);
+        } else if (data.success) {
+          setDashboardData(data);
         }
       }
     } catch (err) {
@@ -172,13 +227,37 @@ const ClientDashboard = () => {
   const displayFileNo = header?.file_no || dashboardData?.member?.file_no || user?.file_no || "";
   const displayTaxYear = header?.year || dashboardData?.tax_year?.name || "";
   const displayFilingType = header?.filing_type;
-  const displayStatus =
+
+  const fileStatusCode = (
+    header?.file_status_code ||
+    dashboardData?.file_status_code ||
+    dashboardData?.file_status?.code ||
+    user?.file_status?.code ||
+    ""
+  )
+    .toUpperCase()
+    .trim();
+
+  const fileStatusName =
     header?.file_status_name ||
     header?.file_status ||
+    dashboardData?.file_status_name ||
+    (typeof dashboardData?.file_status === "string"
+      ? dashboardData.file_status
+      : dashboardData?.file_status?.name) ||
     dashboardData?.filing?.status ||
     dashboardData?.member?.file_status ||
     user?.file_status?.name ||
-    "Registered";
+    (typeof user?.file_status === "string" ? user.file_status : "") ||
+    "Registered Users";
+
+  const currentStatusInfo = resolveFilingStatusInfo({ fileStatusCode, fileStatusName });
+  const currentStage = Math.max(0, currentStatusInfo.stage);
+  const displayStatus = currentStatusInfo.label || fileStatusName || "Registered";
+  const currentPipelineIndex = getPipelineIndex(currentStatusInfo.code);
+  const stageProgressPercentage =
+    cards?.filing_progress?.percentage ??
+    getPipelineProgressPercentage(currentStatusInfo.code);
 
   // Filing Progress Card
   const filingProgressPercentage = cards?.filing_progress?.percentage ?? 33;
@@ -190,8 +269,8 @@ const ClientDashboard = () => {
     cards?.days_to_deadline?.days != null
       ? cards.days_to_deadline.days
       : dashboardData?.deadline?.days_remaining != null
-      ? dashboardData.deadline.days_remaining
-      : calculateDaysToDeadline();
+        ? dashboardData.deadline.days_remaining
+        : calculateDaysToDeadline();
   const daysDeadlineLabel = cards?.days_to_deadline?.label || "Days to deadline";
   const daysDeadlineStatus = cards?.days_to_deadline?.status || "Counting down";
 
@@ -290,235 +369,409 @@ const ClientDashboard = () => {
 
   const emailVerified = isEmailVerified(user);
 
+  // Documents Pending check - button should only appear when documents are pending
+  const isDocumentsPending = (() => {
+    if (fileStatusCode === "DP") return true;
+    const norm = (fileStatusName || "").toLowerCase().trim();
+    if (
+      norm === "documents pending" ||
+      norm === "document pending" ||
+      norm.includes("documents pending") ||
+      norm.includes("document pending")
+    ) {
+      return true;
+    }
+    const docSt = (documentsStatus || docStatus || "").toLowerCase();
+    if (
+      (fileStatusCode === "RGO" ||
+        fileStatusCode === "SP" ||
+        fileStatusCode === "BIP" ||
+        fileStatusCode === "IP" ||
+        !fileStatusCode) &&
+      (docSt.includes("pending") || docSt.includes("awaiting"))
+    ) {
+      return true;
+    }
+    return false;
+  })();
+
+  // Milestone points on Return Progress Chart (Intake -> Documents -> Preparation -> Review -> Filed)
+  const milestonePoints = [
+    { x: 30, y: 118, label: "Intake" },
+    { x: 155, y: 98, label: "Documents" },
+    { x: 280, y: 78, label: "Preparation" },
+    { x: 405, y: 56, label: "Review" },
+    { x: 530, y: 35, label: "Filed" },
+  ];
+
+  const getActiveCurveData = (stage) => {
+    switch (stage) {
+      case 0:
+        return {
+          strokePath: "M 0 122 L 30 118",
+          fillPath: "M 0 140 L 0 122 L 30 118 L 30 140 Z",
+        };
+      case 1:
+        return {
+          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98",
+          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 L 155 140 Z",
+        };
+      case 2:
+        return {
+          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78",
+          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 L 280 140 Z",
+        };
+      case 3:
+        return {
+          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56",
+          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 L 405 140 Z",
+        };
+      case 4:
+        return {
+          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 445 50, 480 42, 510 38",
+          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 445 50, 480 42, 510 38 L 510 140 Z",
+        };
+      case 5:
+      default:
+        return {
+          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35",
+          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35 L 530 140 Z",
+        };
+    }
+  };
+  const pipelineRatio = currentPipelineIndex / Math.max(1, FILE_STATUS_PIPELINE.length - 1);
+  const visualStage = Math.min(
+    5,
+    Math.max(0, Math.ceil(pipelineRatio * 5))
+  );
+  const activeCurve = getActiveCurveData(visualStage);
+  const fullCurveFillPath =
+    "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35 L 530 140 Z";
+
+  const pickImagePath = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "object") {
+      return value.url || value.path || value.src || value.image || "";
+    }
+    return "";
+  };
+
+  const extractImageFromObject = (obj) => {
+    if (!obj || typeof obj !== "object") return "";
+    const directKeys = [
+      "banner_image",
+      "bannerImage",
+      "file_status_image",
+      "status_image",
+      "image",
+      "img",
+      "url",
+      "path",
+      "src",
+    ];
+    for (const key of directKeys) {
+      const picked = pickImagePath(obj[key]);
+      if (picked) return picked;
+    }
+    return "";
+  };
+
+  const getOverviewImagePath = () => {
+    const content = dashboardData?.dashboard_content || dashboardData?.dashboardContent;
+    const statusCode = currentStatusInfo.code;
+
+    const fromStatusList = (() => {
+      const lists = [
+        dashboardData?.file_statuses,
+        dashboardData?.file_status_list,
+        dashboardData?.status_list,
+        content?.file_statuses,
+        content?.status_images,
+      ];
+      for (const list of lists) {
+        if (!Array.isArray(list)) continue;
+        const match = list.find(
+          (item) =>
+            (item?.code || item?.status_code || item?.file_status_code || "")
+              .toUpperCase()
+              .trim() === statusCode
+        );
+        const image = extractImageFromObject(match);
+        if (image) return image;
+      }
+      return "";
+    })();
+
+    const fromStatusMap = (() => {
+      const maps = [
+        dashboardData?.file_status_images,
+        dashboardData?.status_images,
+        content?.file_status_images,
+        content?.status_images,
+      ];
+      for (const map of maps) {
+        if (!map || typeof map !== "object" || Array.isArray(map)) continue;
+        const value = map[statusCode] || map[statusCode?.toLowerCase()];
+        const picked = pickImagePath(value) || extractImageFromObject(value);
+        if (picked) return picked;
+      }
+      return "";
+    })();
+
+    return (
+      pickImagePath(content?.banner_image) ||
+      pickImagePath(content?.bannerImage) ||
+      pickImagePath(content?.image) ||
+      pickImagePath(content?.file_status_image) ||
+      fromStatusList ||
+      fromStatusMap ||
+      extractImageFromObject(dashboardData?.file_status) ||
+      pickImagePath(dashboardData?.file_status?.banner_image) ||
+      pickImagePath(dashboardData?.file_status?.image) ||
+      pickImagePath(dashboardData?.file_status?.file_status_image) ||
+      pickImagePath(dashboardData?.file_status_image) ||
+      pickImagePath(dashboardData?.banner_image) ||
+      pickImagePath(dashboardData?.header?.banner_image) ||
+      pickImagePath(dashboardData?.header?.file_status_image) ||
+      extractImageFromObject(welcomeUserData?.file_status) ||
+      extractImageFromObject(user?.file_status) ||
+      pickImagePath(welcomeUserData?.file_status?.image) ||
+      pickImagePath(user?.file_status?.image) ||
+      ""
+    );
+  };
+
   // Helper to render Dashboard Content (or Fallback Intake Panel)
   const renderMainContentPanel = () => {
-    const content = dashboardData?.dashboard_content;
+    const content = dashboardData?.dashboard_content || dashboardData?.dashboardContent;
+    const overviewImagePath = getOverviewImagePath();
 
-    if (content && content.page_title) {
-      const blocks = content.page_title
+    const pageTitleText = content?.page_title || content?.title || "";
+    const blocks = pageTitleText
+      ? pageTitleText
         .split(/\r?\n\r?\n/)
         .map((b) => b.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+      : [];
 
-      const introParagraphs = [];
-      const stepItems = [];
+    const introParagraphs = [];
+    const stepItems = [];
+    const dashboardBody =
+      content?.description ||
+      content?.welcome_text ||
+      content?.body ||
+      content?.guidelines ||
+      content?.content ||
+      "";
 
-      blocks.forEach((block) => {
-        const match = block.match(/^(\d+)[\.\s]+([\s\S]*)/);
-        if (match) {
-          const stepNum = match[1];
-          const rest = match[2];
-          const lines = rest.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-          const stepTitle = lines[0] || `Step ${stepNum}`;
-          const stepDesc = lines.slice(1).join(" ");
-          stepItems.push({ stepNum, title: stepTitle, description: stepDesc });
-        } else {
-          introParagraphs.push(block);
-        }
+    blocks.forEach((block) => {
+      const match = block.match(/^(\d+)[\.\s]+([\s\S]*)/);
+      if (match) {
+        const stepNum = match[1];
+        const rest = match[2];
+        const lines = rest.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        const stepTitle = lines[0] || `Step ${stepNum}`;
+        const stepDesc = lines.slice(1).join(" ");
+        stepItems.push({ stepNum, title: stepTitle, description: stepDesc });
+      } else {
+        introParagraphs.push(block);
+      }
+    });
+
+    const sections = Array.isArray(content?.sections) ? content.sections : [];
+    const intakeStepsList = Array.isArray(dashboardData?.complete_your_intake?.steps)
+      ? dashboardData.complete_your_intake.steps
+      : [];
+
+    const defaultStepsConfig = [
+      {
+        key: "basic_information",
+        defaultTitle: "Basic information",
+        defaultDesc:
+          "Personal details, spouse information if married, and dependents information for any children or others.",
+        defaultNavTarget: "/dashboard/basic-info/taxpayer",
+        defaultNavText: "Review details →",
+        iconClass: "emerald",
+        IconComp: User,
+        defaultStatus: basicInfoStatus,
+      },
+      {
+        key: "documents",
+        defaultTitle: "Upload tax related documents",
+        defaultDesc:
+          "W-2 forms, 1099s, or any other documents you'd like your preparer to consider.",
+        defaultNavTarget: "/dashboard/upload",
+        defaultNavText: "Upload now →",
+        iconClass: "gold",
+        IconComp: Upload,
+        defaultStatus: documentsStatus,
+      },
+      {
+        key: "consultation",
+        defaultTitle: "Schedule for tax notes",
+        defaultDesc:
+          "Pick a time to talk with our expert about an accurate return and maximum eligible benefits.",
+        defaultNavTarget: "/dashboard/schedule",
+        defaultNavText: "Schedule now →",
+        iconClass: "blue",
+        IconComp: Calendar,
+        defaultStatus: consultationStatus,
+      },
+    ];
+
+    const tasksToRender = defaultStepsConfig.map((cfg, idx) => {
+      const stepFromApi =
+        intakeStepsList.find((s) => s.key === cfg.key) ||
+        intakeStepsList[idx];
+
+      const secFromApi =
+        sections.find((s) => s.order === idx + 1) ||
+        sections[idx];
+
+      const parsedStep = stepItems.find((s) => s.stepNum === String(idx + 1));
+
+      const title =
+        (stepFromApi?.title && stepFromApi.title.trim()) ||
+        (secFromApi?.title && secFromApi.title.trim()) ||
+        parsedStep?.title ||
+        cfg.defaultTitle;
+
+      const description =
+        (stepFromApi?.description && stepFromApi.description.trim()) ||
+        (secFromApi?.description && secFromApi.description.trim()) ||
+        (secFromApi?.content && secFromApi.content.trim()) ||
+        parsedStep?.description ||
+        cfg.defaultDesc;
+
+      const status =
+        stepFromApi?.status ||
+        cfg.defaultStatus;
+
+      let navTarget = cfg.defaultNavTarget;
+      const apiButtonUrl = stepFromApi?.button_url || secFromApi?.button_url;
+      if (apiButtonUrl && apiButtonUrl.startsWith("/dashboard")) {
+        navTarget = apiButtonUrl;
+      }
+
+      let navText = cfg.defaultNavText;
+      const apiButtonText = stepFromApi?.button_text || secFromApi?.button_text;
+      if (apiButtonText && apiButtonText.trim() && apiButtonText.toLowerCase() !== "continue") {
+        navText = apiButtonText.includes("→") ? apiButtonText : `${apiButtonText} →`;
+      }
+
+      return {
+        key: cfg.key,
+        title,
+        description,
+        status,
+        navTarget,
+        navText,
+        iconClass: cfg.iconClass,
+        IconComp: cfg.IconComp,
+      };
+    });
+
+    if (intakeStepsList.length > defaultStepsConfig.length) {
+      intakeStepsList.slice(defaultStepsConfig.length).forEach((extraStep, extraIdx) => {
+        const stepNum = defaultStepsConfig.length + extraIdx + 1;
+        tasksToRender.push({
+          key: extraStep.key || `step_${stepNum}`,
+          title: extraStep.title || `Step ${stepNum}`,
+          description: extraStep.description || "",
+          status: extraStep.status || "Pending",
+          navTarget: (extraStep.button_url && extraStep.button_url.startsWith("/")) ? extraStep.button_url : "/dashboard",
+          navText: extraStep.button_text ? `${extraStep.button_text} →` : "View details →",
+          iconClass: "blue",
+          IconComp: Calendar,
+        });
       });
-
-      return (
-        <div className="dt-panel">
-          <div className="dt-panel-head">
-            <h2>Overview & Guidelines</h2>
-          </div>
-
-          {content.banner_image && (
-            <div style={{ marginBottom: "16px", borderRadius: "8px", overflow: "hidden" }}>
-              <img
-                src={
-                  content.banner_image.startsWith("http")
-                    ? content.banner_image
-                    : `${URLS.ImageUrl}${content.banner_image}`
-                }
-                alt="Dashboard Banner"
-                style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }}
-              />
-            </div>
-          )}
-
-          {introParagraphs.length > 0 && (
-            <div style={{ marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-              {introParagraphs.map((para, idx) => (
-                <p key={idx} style={{ fontSize: "14px", lineHeight: "1.6", color: "#374151", margin: 0 }}>
-                  {para}
-                </p>
-              ))}
-            </div>
-          )}
-
-          {stepItems.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {stepItems.map((item, idx) => {
-                let navTarget = "/dashboard/basic-info/taxpayer";
-                let navText = "Review details →";
-                let iconClass = "emerald";
-                let IconComp = User;
-
-                const lowerTitle = item.title.toLowerCase();
-                if (lowerTitle.includes("upload") || item.stepNum === "2") {
-                  navTarget = "/dashboard/upload";
-                  navText = "Upload now →";
-                  iconClass = "gold";
-                  IconComp = Upload;
-                } else if (
-                  lowerTitle.includes("schedule") ||
-                  lowerTitle.includes("consultation") ||
-                  item.stepNum === "3"
-                ) {
-                  navTarget = "/dashboard/schedule";
-                  navText = "Schedule now →";
-                  iconClass = "blue";
-                  IconComp = Calendar;
-                }
-
-                const currentStatus =
-                  item.stepNum === "1"
-                    ? basicInfoStatus
-                    : item.stepNum === "2"
-                    ? documentsStatus
-                    : consultationStatus;
-
-                return (
-                  <div className="dt-task" key={idx}>
-                    <div className={`dt-ticon ${iconClass}`}>
-                      <IconComp size={16} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="dt-task-row">
-                        <h3>
-                          {item.stepNum}. {item.title}
-                        </h3>
-                        <span className={getStatusPillClass(currentStatus)}>
-                          {currentStatus}
-                        </span>
-                      </div>
-                      {item.description && <p>{item.description}</p>}
-                      <span
-                        className="dt-link"
-                        onClick={() => navigate(navTarget)}
-                      >
-                        {navText}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {/* Dynamic sections if present */}
-          {Array.isArray(content.sections) && content.sections.length > 0 && (
-            <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-              {content.sections.map((sec, sIdx) => (
-                <div
-                  key={sIdx}
-                  style={{
-                    padding: "12px",
-                    background: "#F9FAFB",
-                    borderRadius: "8px",
-                    border: "1px solid #E5E7EB",
-                  }}
-                >
-                  {sec.title && <h4 style={{ margin: "0 0 6px 0", fontSize: "14px", fontWeight: 600 }}>{sec.title}</h4>}
-                  {sec.content && <p style={{ margin: 0, fontSize: "13px", color: "#4B5563" }}>{sec.content}</p>}
-                  {sec.image && (
-                    <img
-                      src={sec.image.startsWith("http") ? sec.image : `${URLS.ImageUrl}${sec.image}`}
-                      alt={sec.title || "Section"}
-                      style={{ marginTop: "8px", maxWidth: "100%", borderRadius: "4px" }}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
     }
 
-    // Default Fallback: Complete your intake panel
     return (
       <div className="dt-panel">
         <div className="dt-panel-head">
-          <h2>Complete your intake</h2>
-          <span className="dt-tag">{completedIntakeCount} of 3 done</span>
+          <h2>Overview & Guidelines</h2>
+          {completedIntakeCount != null && (
+            <span className="dt-tag">{completedIntakeCount} of 3 done</span>
+          )}
         </div>
 
-        {/* Task 1: Basic Information */}
-        <div className="dt-task">
-          <div className="dt-ticon emerald">
-            <User size={16} />
+        <OverviewBanner imagePath={overviewImagePath} alt="Overview & Guidelines" />
+
+        {dashboardBody && (
+          <div className="dt-overview-copy">
+            <p>{dashboardBody}</p>
           </div>
-          <div style={{ flex: 1 }}>
-            <div className="dt-task-row">
-              <h3>Basic information</h3>
-              <span className={getStatusPillClass(basicInfoStatus)}>
-                {basicInfoStatus}
-              </span>
+        )}
+
+        {introParagraphs.length > 0 && (
+          <div className="dt-overview-copy">
+            {introParagraphs.map((para, idx) => (
+              <p key={idx}>{para}</p>
+            ))}
+          </div>
+        )}
+
+        {/* Intake Tasks - dynamically populated from API (complete_your_intake.steps & dashboard_content.sections) with graceful fallbacks */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {tasksToRender.map((task, idx) => (
+            <div className="dt-task" key={task.key || idx}>
+              <div className={`dt-ticon ${task.iconClass}`}>
+                <task.IconComp size={16} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="dt-task-row">
+                  <h3>{task.title}</h3>
+                  <span className={getStatusPillClass(task.status)}>
+                    {task.status}
+                  </span>
+                </div>
+                {task.description && <p>{task.description}</p>}
+                <span
+                  className="dt-link"
+                  onClick={() => navigate(task.navTarget)}
+                >
+                  {task.navText}
+                </span>
+              </div>
             </div>
-            <p>
-              Personal details, spouse information if married, and
-              dependents information for any children or others.
-            </p>
-            <span
-              className="dt-link"
-              onClick={() => navigate("/dashboard/basic-info/taxpayer")}
-            >
-              Review details →
-            </span>
-          </div>
+          ))}
         </div>
 
-        {/* Task 2: Upload Tax Related Documents */}
-        <div className="dt-task">
-          <div className="dt-ticon gold">
-            <Upload size={16} />
+        {/* Dynamic sections if present beyond standard intake */}
+        {sections.length > defaultStepsConfig.length && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
+            {sections.slice(defaultStepsConfig.length).map((sec, sIdx) => (
+              <div
+                key={sIdx}
+                style={{
+                  padding: "14px 16px",
+                  background: "#F9FAFB",
+                  borderRadius: "10px",
+                  border: "1px solid var(--dt-border, #E5E7EB)",
+                }}
+              >
+                {sec.title && <h4 style={{ margin: "0 0 6px 0", fontSize: "14px", fontWeight: 600 }}>{sec.title}</h4>}
+                {(sec.description || sec.content) && (
+                  <p style={{ margin: 0, fontSize: "13px", color: "var(--dt-ink-muted, #4B5563)" }}>
+                    {sec.description || sec.content}
+                  </p>
+                )}
+                {sec.image && (
+                  <div style={{ marginTop: "10px", borderRadius: "6px", overflow: "hidden", maxHeight: "220px", display: "flex", justifyContent: "center", background: "#f8fafc" }}>
+                    <img
+                      src={resolveMediaUrl(sec.image)}
+                      alt={sec.title || "Section"}
+                      style={{ maxWidth: "100%", maxHeight: "220px", objectFit: "contain", borderRadius: "4px" }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-          <div style={{ flex: 1 }}>
-            <div className="dt-task-row">
-              <h3>Upload tax related documents</h3>
-              <span className={getStatusPillClass(documentsStatus)}>
-                {documentsStatus}
-              </span>
-            </div>
-            <p>
-              W-2 forms, 1099s, or any other documents you'd like your
-              preparer to consider.
-            </p>
-            <span
-              className="dt-link"
-              onClick={() => navigate("/dashboard/upload")}
-            >
-              Upload now →
-            </span>
-          </div>
-        </div>
+        )}
 
-        {/* Task 3: Schedule for Tax Notes */}
-        <div className="dt-task">
-          <div className="dt-ticon blue">
-            <Calendar size={16} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div className="dt-task-row">
-              <h3>Schedule for tax notes</h3>
-              <span className={getStatusPillClass(consultationStatus)}>
-                {consultationStatus}
-              </span>
-            </div>
-            <p>
-              Pick a time to talk with our expert about an accurate return
-              and maximum eligible benefits.
-            </p>
-            <span
-              className="dt-link"
-              onClick={() => navigate("/dashboard/schedule")}
-            >
-              Schedule now →
-            </span>
-          </div>
-        </div>
       </div>
     );
   };
@@ -568,14 +821,16 @@ const ClientDashboard = () => {
                   Account {displayFileNo} · TY{displayTaxYear} return {displayFilingType ? `(${displayFilingType}) ` : ""}· {displayStatus}
                 </p>
               </div>
-              <button
-                type="button"
-                className="dt-cta-primary"
-                onClick={() => navigate("/dashboard/upload")}
-              >
-                <Upload size={14} strokeWidth={2.4} />
-                <span>Upload document</span>
-              </button>
+              {isDocumentsPending && (
+                <button
+                  type="button"
+                  className="dt-cta-primary"
+                  onClick={() => navigate("/dashboard/upload")}
+                >
+                  <Upload size={14} strokeWidth={2.4} />
+                  <span>Upload document</span>
+                </button>
+              )}
             </div>
 
             {/* Metrics Row (4 Cards) */}
@@ -647,11 +902,37 @@ const ClientDashboard = () => {
             <div className="dt-grid">
               {/* Left Column (1fr) */}
               <div>
-                {/* Panel 1: Return Progress with SVG Curve & Stepper */}
+                {/* Panel 1: Return Progress with Dynamic SVG Curve & 5-Step Stepper */}
                 <div className="dt-panel">
                   <div className="dt-panel-head">
                     <h2>Return progress</h2>
-                    <span className="dt-tag">TY{displayTaxYear} · updated today</span>
+                    <span className="dt-tag">
+                      TY{displayTaxYear} · {stageProgressPercentage}% complete
+                    </span>
+                  </div>
+
+                  {/* <div className="dt-phase-track">
+                    {FILING_PHASES.map((phase) => {
+                      const isDone = currentStage > phase.stage;
+                      const isActive = currentStage === phase.stage;
+                      return (
+                        <div
+                          key={phase.stage}
+                          className={`dt-phase-segment ${isDone ? "done" : ""} ${isActive ? "active" : ""}`}
+                          style={{ "--phase-color": phase.color }}
+                        >
+                          <div className="dt-phase-segment-bar" />
+                          <span>{phase.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div> */}
+
+                  <div className="dt-pipeline-progress">
+                    <div
+                      className="dt-pipeline-progress-fill"
+                      style={{ width: `${stageProgressPercentage}%` }}
+                    />
                   </div>
 
                   {/* Area Line Chart with Gradient */}
@@ -663,19 +944,19 @@ const ClientDashboard = () => {
                       preserveAspectRatio="none"
                     >
                       <defs>
+                        <linearGradient id="dtFillGradBg" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#EF4C23" stopOpacity="0.12"></stop>
+                          <stop offset="100%" stopColor="#EF4C23" stopOpacity="0.02"></stop>
+                        </linearGradient>
                         <linearGradient id="dtFillGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop
-                            offset="0%"
-                            stopColor="#EF4C23"
-                            stopOpacity="0.25"
-                          ></stop>
-                          <stop
-                            offset="100%"
-                            stopColor="#EF4C23"
-                            stopOpacity="0.0"
-                          ></stop>
+                          <stop offset="0%" stopColor="#EF4C23" stopOpacity="0.45"></stop>
+                          <stop offset="55%" stopColor="#EF4C23" stopOpacity="0.18"></stop>
+                          <stop offset="100%" stopColor="#EF4C23" stopOpacity="0.03"></stop>
                         </linearGradient>
                       </defs>
+
+                      {/* Full trajectory background shade */}
+                      <path d={fullCurveFillPath} fill="url(#dtFillGradBg)"></path>
 
                       {/* Horizontal Grid lines */}
                       <line
@@ -703,72 +984,207 @@ const ClientDashboard = () => {
                         strokeWidth="1"
                       ></line>
 
-                      {/* Area fill */}
+                      {/* Faint Projected Full Trajectory Line */}
                       <path
-                        d="M0,120 L80,118 L160,112 L240,95 L320,98 L400,70 L480,55 L560,50 L560,140 L0,140 Z"
+                        d="M 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35"
+                        fill="none"
+                        stroke="#CBD5E1"
+                        strokeWidth="2"
+                        strokeDasharray="4 4"
+                      ></path>
+
+                      {/* Active Dynamic Area Fill */}
+                      <path
+                        d={activeCurve.fillPath}
                         fill="url(#dtFillGrad)"
                       ></path>
 
-                      {/* Smooth curved progress stroke line */}
+                      {/* Active Dynamic Progress Stroke Line */}
                       <path
-                        d="M0,120 L80,118 L160,112 L240,95 L320,98 L400,70 L480,55 L560,50"
+                        d={activeCurve.strokePath}
                         fill="none"
                         stroke="#EF4C23"
-                        strokeWidth="2.5"
+                        strokeWidth="2.8"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       ></path>
 
-                      {/* End node highlight marker */}
-                      <circle cx="560" cy="50" r="4.5" fill="#EF4C23"></circle>
+                      {/* Dynamic Milestone Points */}
+                      {milestonePoints.map((pt, idx) => {
+                        const isDone = idx < visualStage;
+                        const isCurrent = idx === visualStage;
+                        return (
+                          <g key={idx}>
+                            {isCurrent && (
+                              <circle
+                                cx={pt.x}
+                                cy={pt.y}
+                                r="10"
+                                fill="#EF4C23"
+                                fillOpacity="0.22"
+                              />
+                            )}
+                            <circle
+                              cx={pt.x}
+                              cy={pt.y}
+                              r={isCurrent ? 5.5 : isDone ? 4.5 : 3.5}
+                              fill={isCurrent || isDone ? "#EF4C23" : "#CBD5E1"}
+                              stroke="#FFFFFF"
+                              strokeWidth={isCurrent ? 2 : 1.5}
+                            />
+                          </g>
+                        );
+                      })}
                     </svg>
                   </div>
 
                   {/* Chart Axis Milestones */}
                   <div className="dt-chart-axis">
-                    <span>Registered</span>
-                    <span>Basic info</span>
-                    <span>Documents</span>
-                    <span>Consult</span>
-                    <span>Filed</span>
+                    {milestonePoints.map((pt, idx) => {
+                      const isDone = idx < visualStage;
+                      const isCurrent = idx === visualStage;
+                      return (
+                        <span
+                          key={idx}
+                          style={{
+                            fontWeight: isCurrent ? 700 : isDone ? 600 : 400,
+                            color: isCurrent ? "#EF4C23" : isDone ? "var(--dt-ink)" : "var(--dt-ink-faint)",
+                          }}
+                        >
+                          {isDone ? "✓ " : ""}
+                          {pt.label}
+                        </span>
+                      );
+                    })}
                   </div>
 
-                  {/* Stepper Component */}
+                  <div className="dt-status-grid">
+                    {FILE_STATUS_PIPELINE.map((status, index) => {
+                      const isDone = index < currentPipelineIndex;
+                      const isCurrent = index === currentPipelineIndex;
+                      const state = isCurrent ? "current" : isDone ? "done" : "upcoming";
+                      return (
+                        <span
+                          key={status.code}
+                          className={`dt-status-chip ${state}`}
+                          title={`${status.code} · ${status.label}`}
+                        >
+                          {status.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {/* Dynamic 5-Step Stepper Component */}
                   <div className="dt-stepper">
-                    {/* Step 1 */}
+                    {/* Step 1: Intake */}
                     <div
                       className="dt-snode"
                       onClick={() => navigate("/dashboard/basic-info/taxpayer")}
-                      title="Review Basic Information"
+                      title="Intake & Basic Information"
                     >
-                      <div className="dt-scircle done">✓</div>
-                      <div className="dt-slabel">Basic info</div>
+                      <div className={`dt-scircle ${currentStage > 0 ? "done" : currentStage === 0 ? "active" : ""}`}>
+                        {currentStage > 0 ? "✓" : "01"}
+                      </div>
+                      <div
+                        className="dt-slabel"
+                        style={{
+                          fontWeight: currentStage === 0 ? 600 : 500,
+                          color: currentStage === 0 ? "var(--dt-gold)" : undefined,
+                        }}
+                      >
+                        Intake
+                      </div>
                     </div>
 
-                    {/* Connecting Line 1 */}
-                    <div className="dt-sline done"></div>
+                    <div className={`dt-sline ${currentStage >= 1 ? "done" : ""}`}></div>
 
-                    {/* Step 2 */}
+                    {/* Step 2: Documents */}
                     <div
                       className="dt-snode"
                       onClick={() => navigate("/dashboard/upload")}
                       title="Upload Documents"
                     >
-                      <div className="dt-scircle active">02</div>
-                      <div className="dt-slabel">Documents</div>
+                      <div className={`dt-scircle ${currentStage > 1 ? "done" : currentStage === 1 ? "active" : ""}`}>
+                        {currentStage > 1 ? "✓" : "02"}
+                      </div>
+                      <div
+                        className="dt-slabel"
+                        style={{
+                          fontWeight: currentStage === 1 ? 600 : 500,
+                          color: currentStage === 1 ? "var(--dt-gold)" : undefined,
+                        }}
+                      >
+                        Documents
+                      </div>
                     </div>
 
-                    {/* Connecting Line 2 */}
-                    <div className="dt-sline"></div>
+                    <div className={`dt-sline ${currentStage >= 2 ? "done" : ""}`}></div>
 
-                    {/* Step 3 */}
+                    {/* Step 3: Preparation */}
                     <div
                       className="dt-snode"
                       onClick={() => navigate("/dashboard/schedule")}
-                      title="Schedule Consultation"
+                      title="Tax Preparation & Notes"
                     >
-                      <div className="dt-scircle">03</div>
-                      <div className="dt-slabel">Consult</div>
+                      <div className={`dt-scircle ${currentStage > 2 ? "done" : currentStage === 2 ? "active" : ""}`}>
+                        {currentStage > 2 ? "✓" : "03"}
+                      </div>
+                      <div
+                        className="dt-slabel"
+                        style={{
+                          fontWeight: currentStage === 2 ? 600 : 500,
+                          color: currentStage === 2 ? "var(--dt-gold)" : undefined,
+                        }}
+                      >
+                        Preparation
+                      </div>
+                    </div>
+
+                    <div className={`dt-sline ${currentStage >= 3 ? "done" : ""}`}></div>
+
+                    {/* Step 4: Review & Payment */}
+                    <div
+                      className="dt-snode"
+                      onClick={() =>
+                        navigate(currentStage >= 3 ? "/dashboard/tax-summary" : "/dashboard/make-payment")
+                      }
+                      title="Review & Summary / Payment"
+                    >
+                      <div className={`dt-scircle ${currentStage > 3 ? "done" : currentStage === 3 ? "active" : ""}`}>
+                        {currentStage > 3 ? "✓" : "04"}
+                      </div>
+                      <div
+                        className="dt-slabel"
+                        style={{
+                          fontWeight: currentStage === 3 ? 600 : 500,
+                          color: currentStage === 3 ? "var(--dt-gold)" : undefined,
+                        }}
+                      >
+                        Review
+                      </div>
+                    </div>
+
+                    <div className={`dt-sline ${currentStage >= 4 ? "done" : ""}`}></div>
+
+                    {/* Step 5: Filed / Completed */}
+                    <div
+                      className="dt-snode"
+                      onClick={() => navigate(currentStage >= 4 ? "/dashboard/download" : "#")}
+                      title="Filing & Acceptance"
+                    >
+                      <div className={`dt-scircle ${currentStage >= 5 ? "done" : currentStage === 4 ? "active" : ""}`}>
+                        {currentStage >= 5 ? "✓" : "05"}
+                      </div>
+                      <div
+                        className="dt-slabel"
+                        style={{
+                          fontWeight: currentStage >= 4 ? 600 : 500,
+                          color: currentStage >= 5 ? "var(--dt-teal)" : currentStage === 4 ? "var(--dt-gold)" : undefined,
+                        }}
+                      >
+                        Filed
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -958,10 +1374,10 @@ const ClientDashboard = () => {
                           <p className="dt-t">
                             {activity.date
                               ? new Date(activity.date).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
                               : activity.time || "Recent"}
                           </p>
                         </div>
@@ -972,15 +1388,15 @@ const ClientDashboard = () => {
                       <div className="dt-activity">
                         <div className="dt-adot on"></div>
                         <div>
-                          <p>Basic information {basicInfoStatus.toLowerCase()}</p>
-                          <p className="dt-t">Updated</p>
+                          <p>Current status: {displayStatus}</p>
+                          <p className="dt-t">{currentStatusInfo.shortLabel || "Intake"} phase</p>
                         </div>
                       </div>
                       <div className="dt-activity">
                         <div className="dt-adot"></div>
                         <div>
                           <p>Account registered</p>
-                          <p className="dt-t">Status: {displayStatus}</p>
+                          <p className="dt-t">File #{displayFileNo || "—"}</p>
                         </div>
                       </div>
                     </>

@@ -67,6 +67,7 @@ export const URLS = {
 
     // Send Query
     SendQuery : base_url + "v1/minimumTax/user/query/sendQuery",
+    GetQueries : base_url + "v1/minimumTax/user/query/getMyQueries",
 
     // Notifications
     GetNotificationCount : base_url + "v1/minimumTax/user/query/getNotificationCount",

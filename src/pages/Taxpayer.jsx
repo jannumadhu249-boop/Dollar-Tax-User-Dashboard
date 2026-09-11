@@ -23,8 +23,8 @@ const Taxpayer = () => {
 
   // Referral states
   const [referred, setReferred] = useState("no");
-  const [referFullName, setReferFullName] = useState("");
-  const [referEmail, setReferEmail] = useState("");
+  const [refer_full_name, setReferFullName] = useState("");
+  const [refer_email, setReferEmail] = useState("");
 
   // Dynamic states list from API
   const [statesList, setStatesList] = useState([]);
@@ -43,6 +43,7 @@ const Taxpayer = () => {
     contact_number: "",
     alternate_number: "",
     email: "",
+    date_of_marriage: "",
     mailing_address: "",
     city: "",
     state: "",
@@ -133,6 +134,7 @@ const Taxpayer = () => {
           contact_number: item.contact_number || "",
           alternate_number: item.alternate_number || "",
           email: item.email || "",
+          date_of_marriage: item.date_of_marriage || "",
           mailing_address: item.mailing_address || "",
           city: item.city || "",
           state: item.state || "",
@@ -142,7 +144,7 @@ const Taxpayer = () => {
         if (item.date_of_birth) setDateOfBirth(new Date(item.date_of_birth));
         if (item.first_entry_date_into_usa)
           setFirstEntryDate(new Date(item.first_entry_date_into_usa));
-        if (item.marriage_date) setMarriageDate(new Date(item.marriage_date));
+        if (item.date_of_marriage) setMarriageDate(new Date(item.date_of_marriage));
 
         if (item.referred !== undefined) setReferred(item.referred ? "yes" : "no");
         if (item.refer_full_name) setReferFullName(item.refer_full_name);
@@ -151,6 +153,19 @@ const Taxpayer = () => {
         // Do not show error when no data found – treat as new profile
         if (resData.message && resData.message.toLowerCase().includes("not found")) {
           setError("");
+          // Pre-fill from localStorage user data saved during registration
+          try {
+            const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+            if (savedUser && (savedUser.first_name || savedUser.last_name || savedUser.email)) {
+              setFormData((prev) => ({
+                ...prev,
+                first_name: savedUser.first_name || prev.first_name,
+                last_name: savedUser.last_name || prev.last_name,
+                email: savedUser.email || prev.email,
+                contact_number: savedUser.contact_number || prev.contact_number,
+              }));
+            }
+          } catch (_) {}
         } else {
           setError(resData.message || "Failed to fetch taxpayer details.");
         }
@@ -281,8 +296,8 @@ const Taxpayer = () => {
       zipcode: formData.zipcode,
       marriage_date: formatDate(marriageDate),
       referred: referred === "yes",
-      refer_full_name: referFullName,
-      refer_email: referEmail,
+      refer_full_name: refer_full_name,
+      refer_email: refer_email,
     };
 
     try {
@@ -838,7 +853,7 @@ const Taxpayer = () => {
                           type="text"
                           className="form-control"
                           placeholder="Enter Referred Name"
-                          value={referFullName}
+                          value={refer_full_name}
                           onChange={(e) => {
                             setReferFullName(e.target.value);
                             if (error) setError("");
@@ -852,7 +867,7 @@ const Taxpayer = () => {
                           type="email"
                           className="form-control"
                           placeholder="Enter Referred Email Address"
-                          value={referEmail}
+                          value={refer_email}
                           onChange={(e) => {
                             setReferEmail(e.target.value);
                             if (error) setError("");

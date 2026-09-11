@@ -24,6 +24,7 @@ const UploadDocuments = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedDocTypeId, setSelectedDocTypeId] = useState("");
   const [fileName, setFileName] = useState("");
+  const [document_name, setDocument_name] = useState("");
   const [documentTypes, setDocumentTypes] = useState([]);
   const [documents, setDocuments] = useState([]);
 
@@ -156,7 +157,7 @@ const UploadDocuments = () => {
       return;
     }
 
-    if (!fileName.trim()) {
+    if (!document_name.trim()) {
       setError("Please enter a name for the file.");
       return;
     }
@@ -166,7 +167,7 @@ const UploadDocuments = () => {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("document_type_id", selectedDocTypeId);
-      formData.append("file_name", fileName.trim());
+      formData.append("file_name", document_name.trim());
       formData.append("document", selectedFile);
 
       const res = await fetch(URLS.UploadDocuments, {
@@ -193,7 +194,7 @@ const UploadDocuments = () => {
         setSuccessMsg(data.message || "Document uploaded successfully!");
         setSelectedFile(null);
         setSelectedDocTypeId("");
-        setFileName("");
+        setDocument_name("");
         setShowUploadForm(false);
         fetchDocuments();
       } else {
@@ -278,12 +279,10 @@ const UploadDocuments = () => {
   // Helper to extract filename from API object structure
   const getFileName = (doc) => {
     return (
-      doc.original_name ||
-      doc.file_name ||
+      // doc.original_name ||
+      // doc.file_name ||
       doc.document_name ||
-      doc.name ||
-      doc.document ||
-      "Document"
+      doc.name
     );
   };
 
@@ -426,9 +425,9 @@ const UploadDocuments = () => {
                       type="text"
                       className="form-control"
                       placeholder="Enter file name"
-                      value={fileName}
+                      value={document_name}
                       onChange={(e) => {
-                        setFileName(e.target.value);
+                        setDocument_name(e.target.value);
                         if (error) setError("");
                       }}
                       disabled={uploading}

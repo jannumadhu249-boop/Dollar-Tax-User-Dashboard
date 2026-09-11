@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getStoredUser, isEmailVerified } from "../utils/user";
 import { URLS } from "../url";
+import { resolveMediaUrl } from "../utils/media";
 import SendQueryModal from "../Components/SendQueryModal";
 import WelcomeModal from "../Components/WelcomeModal";
 import "../styles/Dashboard.css";
@@ -257,6 +258,115 @@ const Dashboard = () => {
         }
       });
 
+      const sections = Array.isArray(content?.sections) ? content.sections : [];
+      const intakeStepsList = Array.isArray(dashboardData?.complete_your_intake?.steps)
+        ? dashboardData.complete_your_intake.steps
+        : [];
+
+      const defaultStepsConfig = [
+        {
+          key: "basic_information",
+          defaultTitle: "Basic information",
+          defaultDesc:
+            "Personal details, spouse information if married, and dependents information for any children or others.",
+          defaultNavTarget: "/dashboard/basic-info/taxpayer",
+          defaultNavText: "Review details →",
+          iconClass: "emerald",
+          IconComp: User,
+          defaultStatus: basicInfoStatus,
+        },
+        {
+          key: "documents",
+          defaultTitle: "Upload tax related documents",
+          defaultDesc:
+            "W-2 forms, 1099s, or any other documents you'd like your preparer to consider.",
+          defaultNavTarget: "/dashboard/upload",
+          defaultNavText: "Upload now →",
+          iconClass: "gold",
+          IconComp: Upload,
+          defaultStatus: documentsStatus,
+        },
+        {
+          key: "consultation",
+          defaultTitle: "Schedule for tax notes",
+          defaultDesc:
+            "Pick a time to talk with our expert about an accurate return and maximum eligible benefits.",
+          defaultNavTarget: "/dashboard/schedule",
+          defaultNavText: "Schedule now →",
+          iconClass: "blue",
+          IconComp: Calendar,
+          defaultStatus: consultationStatus,
+        },
+      ];
+
+      const tasksToRender = defaultStepsConfig.map((cfg, idx) => {
+        const stepFromApi =
+          intakeStepsList.find((s) => s.key === cfg.key) ||
+          intakeStepsList[idx];
+
+        const secFromApi =
+          sections.find((s) => s.order === idx + 1) ||
+          sections[idx];
+
+        const parsedStep = stepItems.find((s) => s.stepNum === String(idx + 1));
+
+        const title =
+          (stepFromApi?.title && stepFromApi.title.trim()) ||
+          (secFromApi?.title && secFromApi.title.trim()) ||
+          parsedStep?.title ||
+          cfg.defaultTitle;
+
+        const description =
+          (stepFromApi?.description && stepFromApi.description.trim()) ||
+          (secFromApi?.description && secFromApi.description.trim()) ||
+          (secFromApi?.content && secFromApi.content.trim()) ||
+          parsedStep?.description ||
+          cfg.defaultDesc;
+
+        const status =
+          stepFromApi?.status ||
+          cfg.defaultStatus;
+
+        let navTarget = cfg.defaultNavTarget;
+        const apiButtonUrl = stepFromApi?.button_url || secFromApi?.button_url;
+        if (apiButtonUrl && apiButtonUrl.startsWith("/dashboard")) {
+          navTarget = apiButtonUrl;
+        }
+
+        let navText = cfg.defaultNavText;
+        const apiButtonText = stepFromApi?.button_text || secFromApi?.button_text;
+        if (apiButtonText && apiButtonText.trim() && apiButtonText.toLowerCase() !== "continue") {
+          navText = apiButtonText.includes("→") ? apiButtonText : `${apiButtonText} →`;
+        }
+
+        return {
+          key: cfg.key,
+          title,
+          description,
+          status,
+          navTarget,
+          navText,
+          iconClass: cfg.iconClass,
+          IconComp: cfg.IconComp,
+        };
+      });
+
+      if (intakeStepsList.length > defaultStepsConfig.length) {
+        intakeStepsList.slice(defaultStepsConfig.length).forEach((extraStep, extraIdx) => {
+          const stepNum = defaultStepsConfig.length + extraIdx + 1;
+          tasksToRender.push({
+            key: extraStep.key || `step_${stepNum}`,
+            title: extraStep.title || `Step ${stepNum}`,
+            description: extraStep.description || "",
+            status: extraStep.status || "Pending",
+            navTarget: (extraStep.button_url && extraStep.button_url.startsWith("/")) ? extraStep.button_url : "/dashboard",
+            navText: extraStep.button_text ? `${extraStep.button_text} →` : "View details →",
+            iconClass: "blue",
+            IconComp: Calendar,
+          });
+        });
+      }
+
       return (
         <div className="dt-panel">
           <div className="dt-panel-head">
@@ -264,15 +374,14 @@ const Dashboard = () => {
           </div>
 
           {content.banner_image && (
-            <div style={{ marginBottom: "16px", borderRadius: "8px", overflow: "hidden" }}>
+            <div className="dt-overview-banner">
+              <div
+                className="dt-overview-banner-bg"
+                style={{ backgroundImage: `url(${resolveMediaUrl(content.banner_image)})` }}
+              />
               <img
-                src={
-                  content.banner_image.startsWith("http")
-                    ? content.banner_image
-                    : `${URLS.ImageUrl}${content.banner_image}`
-                }
+                src={resolveMediaUrl(content.banner_image)}
                 alt="Dashboard Banner"
-                style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }}
               />
             </div>
           )}
@@ -287,65 +396,30 @@ const Dashboard = () => {
             </div>
           )}
 
-          {stepItems.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {stepItems.map((item, idx) => {
-                let navTarget = "/dashboard/basic-info/taxpayer";
-                let navText = "Review details →";
-                let iconClass = "emerald";
-                let IconComp = User;
-
-                const lowerTitle = item.title.toLowerCase();
-                if (lowerTitle.includes("upload") || item.stepNum === "2") {
-                  navTarget = "/dashboard/upload";
-                  navText = "Upload now →";
-                  iconClass = "gold";
-                  IconComp = Upload;
-                } else if (
-                  lowerTitle.includes("schedule") ||
-                  lowerTitle.includes("consultation") ||
-                  item.stepNum === "3"
-                ) {
-                  navTarget = "/dashboard/schedule";
-                  navText = "Schedule now →";
-                  iconClass = "blue";
-                  IconComp = Calendar;
-                }
-
-                const currentStatus =
-                  item.stepNum === "1"
-                    ? basicInfoStatus
-                    : item.stepNum === "2"
-                    ? documentsStatus
-                    : consultationStatus;
-
-                return (
-                  <div className="dt-task" key={idx}>
-                    <div className={`dt-ticon ${iconClass}`}>
-                      <IconComp size={16} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="dt-task-row">
-                        <h3>
-                          {item.stepNum}. {item.title}
-                        </h3>
-                        <span className={getStatusPillClass(currentStatus)}>
-                          {currentStatus}
-                        </span>
-                      </div>
-                      {item.description && <p>{item.description}</p>}
-                      <span
-                        className="dt-link"
-                        onClick={() => navigate(navTarget)}
-                      >
-                        {navText}
-                      </span>
-                    </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {tasksToRender.map((item, idx) => (
+              <div className="dt-task" key={item.key || idx}>
+                <div className={`dt-ticon ${item.iconClass}`}>
+                  <item.IconComp size={16} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="dt-task-row">
+                    <h3>{item.title}</h3>
+                    <span className={getStatusPillClass(item.status)}>
+                      {item.status}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          ) : null}
+                  {item.description && <p>{item.description}</p>}
+                  <span
+                    className="dt-link"
+                    onClick={() => navigate(item.navTarget)}
+                  >
+                    {item.navText}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Dynamic sections if present */}
           {Array.isArray(content.sections) && content.sections.length > 0 && (
@@ -363,11 +437,13 @@ const Dashboard = () => {
                   {sec.title && <h4 style={{ margin: "0 0 6px 0", fontSize: "14px", fontWeight: 600 }}>{sec.title}</h4>}
                   {sec.content && <p style={{ margin: 0, fontSize: "13px", color: "#4B5563" }}>{sec.content}</p>}
                   {sec.image && (
-                    <img
-                      src={sec.image.startsWith("http") ? sec.image : `${URLS.ImageUrl}${sec.image}`}
-                      alt={sec.title || "Section"}
-                      style={{ marginTop: "8px", maxWidth: "100%", borderRadius: "4px" }}
-                    />
+                    <div style={{ marginTop: "10px", borderRadius: "6px", overflow: "hidden", maxHeight: "220px", display: "flex", justifyContent: "center", background: "#f8fafc" }}>
+                      <img
+                        src={resolveMediaUrl(sec.image)}
+                        alt={sec.title || "Section"}
+                        style={{ maxWidth: "100%", maxHeight: "220px", objectFit: "contain", borderRadius: "4px" }}
+                      />
+                    </div>
                   )}
                 </div>
               ))}
