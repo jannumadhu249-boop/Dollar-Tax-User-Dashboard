@@ -23,7 +23,6 @@ const UploadDocuments = () => {
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedDocTypeId, setSelectedDocTypeId] = useState("");
-  const [fileName, setFileName] = useState("");
   const [document_name, setDocument_name] = useState("");
   const [documentTypes, setDocumentTypes] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -134,9 +133,19 @@ const UploadDocuments = () => {
   }, []);
 
   /* ── File Selection Change ─────────────────────────────────────── */
+  const MAX_FILE_SIZE_MB = 25;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setError(`File size exceeds ${MAX_FILE_SIZE_MB}MB limit. Please choose a smaller file.`);
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+      setSelectedFile(file);
       if (error) setError("");
     }
   };
@@ -162,12 +171,17 @@ const UploadDocuments = () => {
       return;
     }
 
+    if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+      setError(`File size exceeds ${MAX_FILE_SIZE_MB}MB limit. Please choose a smaller file.`);
+      return;
+    }
+
     setUploading(true);
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("document_type_id", selectedDocTypeId);
-      formData.append("file_name", document_name.trim());
+      formData.append("document_name", document_name.trim());
       formData.append("document", selectedFile);
 
       const res = await fetch(URLS.UploadDocuments, {
@@ -195,6 +209,7 @@ const UploadDocuments = () => {
         setSelectedFile(null);
         setSelectedDocTypeId("");
         setDocument_name("");
+        if (fileInputRef.current) fileInputRef.current.value = "";
         setShowUploadForm(false);
         fetchDocuments();
       } else {
@@ -279,10 +294,11 @@ const UploadDocuments = () => {
   // Helper to extract filename from API object structure
   const getFileName = (doc) => {
     return (
-      // doc.original_name ||
-      // doc.file_name ||
       doc.document_name ||
-      doc.name
+      // doc.file_name ||
+      // doc.original_name ||
+      doc.name ||
+      ""
     );
   };
 
@@ -457,7 +473,7 @@ const UploadDocuments = () => {
                       </label>
                     </div>
                     <p className="file-note" style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "0.4rem" }}>
-                      Note: Please upload files size below 20MB (.pdf, .doc, .docx, .png, .jpg)
+                      Note: Please upload files size below 25MB (.pdf, .doc, .docx, .png, .jpg)
                     </p>
                   </div>
                 </div>
@@ -466,7 +482,14 @@ const UploadDocuments = () => {
                 <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
                   <button
                     type="button"
-                    onClick={() => setShowUploadForm(false)}
+                    onClick={() => {
+                      setShowUploadForm(false);
+                      setSelectedFile(null);
+                      setSelectedDocTypeId("");
+                      setDocument_name("");
+                      setError("");
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
                     style={{
                       padding: "0.55rem 1.25rem",
                       borderRadius: "8px",

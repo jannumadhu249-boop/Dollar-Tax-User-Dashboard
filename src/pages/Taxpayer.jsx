@@ -352,6 +352,7 @@ const Taxpayer = () => {
     "Q",
     "EAD",
     "GREEN CARD",
+    "TN",
   ];
   const filingOptions = [
     "Select",
