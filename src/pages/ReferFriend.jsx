@@ -201,7 +201,7 @@ const ReferFriend = () => {
               <div className="refer-form-card">
                 <h3>Your Referring Details</h3>
 
-                <div className="referring-code">
+                {/* <div className="referring-code">
                   <p>
                     Referral Code:&nbsp;
                     {codeLoading ? (
@@ -212,7 +212,7 @@ const ReferFriend = () => {
                       <strong>{referralCode || 'Not Available'}</strong>
                     )}
                   </p>
-                </div>
+                </div> */}
 
                 {error && (
                   <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '4px', marginBottom: '1rem' }}>

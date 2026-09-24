@@ -123,7 +123,7 @@ const ReferDetails = () => {
             <div className="summary-value">${(summary.paid || 0).toFixed(2)}</div>
           </div>
           <div className="summary-card-item">
-            <div className="summary-label">BAL</div>
+            <div className="summary-label">Referral Bonus</div>
             <div className="summary-value">${(summary.balance || 0).toFixed(2)}</div>
           </div>
         </div>

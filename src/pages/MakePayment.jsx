@@ -387,9 +387,9 @@ const MakePayment = () => {
                           <FileText className="mp-card-title-icon" size={24} />
                           Filing Summary & Authorization
                         </h3>
-                        <span style={{ fontSize: "0.85rem", color: "#64748b", fontWeight: 600 }}>
+                        {/* <span style={{ fontSize: "0.85rem", color: "#64748b", fontWeight: 600 }}>
                           Client Ref: <strong>{user?.file_no || "TAX-CLIENT"}</strong>
-                        </span>
+                        </span> */}
                       </div>
 
                       
@@ -548,7 +548,7 @@ const MakePayment = () => {
                       {paymentMethod === "paypal" && (
                         <div className="mp-paypal-container">
                           {/* Step-by-Step Flow Progress Bar */}
-                          <div className="mp-paypal-steps-banner">
+                          {/* <div className="mp-paypal-steps-banner">
                             <div className="mp-paypal-step-item active">
                               <div className="mp-paypal-step-circle">1</div>
                               <div className="mp-paypal-step-text">
@@ -572,15 +572,15 @@ const MakePayment = () => {
                                 <span className="mp-paypal-step-sub">Tax Invoice</span>
                               </div>
                             </div>
-                          </div>
+                          </div> */}
 
                           {/* Pay in 4 Interest-Free Installments Banner */}
-                          <div className="mp-paypal-installment-badge">
+                          {/* <div className="mp-paypal-installment-badge">
                             <Clock size={16} className="mp-installment-icon" />
                             <span>
                               Or split into <strong>4 interest-free payments of ${(netTotal / 4).toFixed(2)}</strong> with PayPal Pay Later.
                             </span>
-                          </div>
+                          </div> */}
 
                           {/* PayPal Smart Buttons Container */}
                           <div className="mp-paypal-buttons-box">

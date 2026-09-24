@@ -79,8 +79,9 @@ const ClientDashboard = () => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [welcomeUserData, setWelcomeUserData] = useState(null);
 
-  // Point of Contact inline message state
-  const [isMessageOpen, setIsMessageOpen] = useState(false);
+  // Point of Contact card state
+  const [isPocExpanded, setIsPocExpanded] = useState(false);
+  const [showPocTextarea, setShowPocTextarea] = useState(false);
   const [pocMessage, setPocMessage] = useState("");
   const [pocSending, setPocSending] = useState(false);
   const [pocSuccess, setPocSuccess] = useState("");
@@ -396,57 +397,7 @@ const ClientDashboard = () => {
   })();
 
   // Milestone points on Return Progress Chart (Intake -> Documents -> Preparation -> Review -> Filed)
-  const milestonePoints = [
-    { x: 30, y: 118, label: "Intake" },
-    { x: 155, y: 98, label: "Documents" },
-    { x: 280, y: 78, label: "Preparation" },
-    { x: 405, y: 56, label: "Review" },
-    { x: 530, y: 35, label: "Filed" },
-  ];
-
-  const getActiveCurveData = (stage) => {
-    switch (stage) {
-      case 0:
-        return {
-          strokePath: "M 0 122 L 30 118",
-          fillPath: "M 0 140 L 0 122 L 30 118 L 30 140 Z",
-        };
-      case 1:
-        return {
-          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98",
-          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 L 155 140 Z",
-        };
-      case 2:
-        return {
-          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78",
-          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 L 280 140 Z",
-        };
-      case 3:
-        return {
-          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56",
-          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 L 405 140 Z",
-        };
-      case 4:
-        return {
-          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 445 50, 480 42, 510 38",
-          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 445 50, 480 42, 510 38 L 510 140 Z",
-        };
-      case 5:
-      default:
-        return {
-          strokePath: "M 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35",
-          fillPath: "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35 L 530 140 Z",
-        };
-    }
-  };
-  const pipelineRatio = currentPipelineIndex / Math.max(1, FILE_STATUS_PIPELINE.length - 1);
-  const visualStage = Math.min(
-    5,
-    Math.max(0, Math.ceil(pipelineRatio * 5))
-  );
-  const activeCurve = getActiveCurveData(visualStage);
-  const fullCurveFillPath =
-    "M 0 140 L 0 122 L 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35 L 530 140 Z";
+  // Removed - chart visualization replaced with simple stepper
 
   const pickImagePath = (value) => {
     if (!value) return "";
@@ -692,9 +643,9 @@ const ClientDashboard = () => {
       <div className="dt-panel">
         <div className="dt-panel-head">
           <h2>Overview & Guidelines</h2>
-          {completedIntakeCount != null && (
+          {/* {completedIntakeCount != null && (
             <span className="dt-tag">{completedIntakeCount} of 3 done</span>
-          )}
+          )} */}
         </div>
 
         <OverviewBanner imagePath={overviewImagePath} alt="Overview & Guidelines" />
@@ -817,9 +768,6 @@ const ClientDashboard = () => {
               <div>
                 <p className="dt-crumb">Dashboard / Overview</p>
                 <h1 className="dt-display">Dear {displayName}</h1>
-                <p>
-                  Account {displayFileNo} · TY{displayTaxYear} return {displayFilingType ? `(${displayFilingType}) ` : ""}· {displayStatus}
-                </p>
               </div>
               {isDocumentsPending && (
                 <button
@@ -835,24 +783,19 @@ const ClientDashboard = () => {
 
             {/* Metrics Row (4 Cards) */}
             <section className="dt-metrics">
-              {/* Metric 1 - Filing Progress */}
-              {/* <div className="dt-metric">
-                <p className="dt-k">{filingProgressLabel}</p>
+              {/* Metric 1 - Account Information */}
+              <div className="dt-metric">
+                <p className="dt-k">Account Information</p>
                 <div className="dt-row2">
-                  <p className="dt-v">{filingProgressPercentage}%</p>
-                  <span className="dt-trend up">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                    >
-                      <path d="M6 15l6-6 6 6"></path>
-                    </svg>
-                    {filingProgressStep}
+                  <p className="dt-v" style={{ fontSize: "14px", lineHeight: "1.4" }}>
+                    Account - {displayFileNo}
+                  </p>
+                  <span className="dt-trend muted" style={{ fontSize: "12px" }}>
+                    TY{displayTaxYear} · {displayFilingType || "Standard"} ·
+                    <br/> {displayStatus}
                   </span>
                 </div>
-              </div> */}
+              </div>
 
               {/* Metric 2 - Days to Deadline */}
               <div className="dt-metric">
@@ -873,537 +816,497 @@ const ClientDashboard = () => {
                 </div>
               </div>
 
-              {/* Metric 3 - Documents */}
+              {/* Metric 3 - Referrals Bonus */}
               <div className="dt-metric">
-                <p className="dt-k">{docLabel}</p>
+                <p className="dt-k">Referrals Bonus</p>
                 <div className="dt-row2">
-                  <p className="dt-v">{docCount}</p>
-                  <span className={`dt-trend ${docCount > 0 ? "up" : "muted"}`}>
-                    {docStatus}
+                  <p className="dt-v">$0</p>
+                  <span className="dt-trend muted">
+                    Refer friends and earn
                   </span>
                 </div>
               </div>
 
-              {/* Metric 4 - Preparer */}
-              <div className="dt-metric">
-                <p className="dt-k">{preparerLabel}</p>
+              {/* Metric 4 - Point of Contact - Clickable */}
+              <div 
+                className="dt-metric" 
+                onClick={() => {
+                  if (!showPocTextarea) {
+                    setIsPocExpanded(!isPocExpanded);
+                  }
+                }}
+                style={{ cursor: showPocTextarea ? "default" : "pointer", transition: "all 0.2s ease" }}
+                onMouseEnter={(e) => {
+                  if (!showPocTextarea) {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!showPocTextarea) {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }
+                }}
+              >
+                <p className="dt-k">Point of Contact</p>
                 <div className="dt-row2">
                   <p className="dt-v" style={{ fontSize: "16px" }}>
-                    {preparerName}
+                    {pocName || "Support Specialist"}
                   </p>
-                  <span className={`dt-trend ${isPreparerAssigned ? "up" : "muted"}`}>
-                    {preparerStatus}
+                  <span className="dt-trend up">
+                    {pocPhone || pocEmail || "Available"}
                   </span>
                 </div>
+
+                {/* Step 2: Show "Send message" button when card is clicked */}
+                {isPocExpanded && !showPocTextarea && (
+                  <button
+                    type="button"
+                    className="dt-cta-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPocTextarea(true);
+                    }}
+                    style={{
+                      marginTop: "12px",
+                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      border: "none",
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      color: "#fff",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      justifyContent: "center",
+                      width: "100%",
+                      transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    <MessageSquare size={16} strokeWidth={2.4} />
+                    <span>Send message</span>
+                  </button>
+                )}
+
+                {/* Step 3: Show textarea and action buttons when "Send message" is clicked */}
+                {showPocTextarea && (
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ marginTop: "12px" }}
+                  >
+                    <textarea
+                      value={pocMessage}
+                      onChange={(e) => setPocMessage(e.target.value)}
+                      placeholder="Type your message here..."
+                      rows={3}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        border: "1px solid var(--dt-border, #E5E7EB)",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontFamily: "inherit",
+                        resize: "vertical",
+                        marginBottom: "12px",
+                        boxSizing: "border-box",
+                      }}
+                      disabled={pocSending}
+                      autoFocus
+                    />
+
+                    {/* Success Alert */}
+                    {pocSuccess && (
+                      <div
+                        style={{
+                          padding: "8px 10px",
+                          background: "#D1FAE5",
+                          border: "1px solid #10B981",
+                          borderRadius: "6px",
+                          marginBottom: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "12px",
+                          color: "#065F46",
+                        }}
+                      >
+                        <Check size={14} />
+                        <span>{pocSuccess}</span>
+                      </div>
+                    )}
+
+                    {/* Error Alert */}
+                    {pocError && (
+                      <div
+                        style={{
+                          padding: "8px 10px",
+                          background: "#FEE2E2",
+                          border: "1px solid #EF4444",
+                          borderRadius: "6px",
+                          marginBottom: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "12px",
+                          color: "#991B1B",
+                        }}
+                      >
+                        <AlertCircle size={14} />
+                        <span>{pocError}</span>
+                      </div>
+                    )}
+
+                    {/* Cancel and Send buttons - equal width, side by side */}
+                    <div style={{ display: "flex", gap: "12px" }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPocTextarea(false);
+                          setIsPocExpanded(false);
+                          setPocMessage("");
+                          setPocError("");
+                          setPocSuccess("");
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "10px 16px",
+                          background: "#F3F4F6",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          fontSize: "14px",
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                          color: "#374151",
+                          height: "40px",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#E5E7EB";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "#F3F4F6";
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSendPocMessage(e);
+                        }}
+                        disabled={pocSending || !pocMessage.trim()}
+                        style={{
+                          flex: 1,
+                          padding: "10px 16px",
+                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          border: "none",
+                          borderRadius: "8px",
+                          fontSize: "14px",
+                          fontWeight: 500,
+                          color: "#fff",
+                          cursor: pocSending || !pocMessage.trim() ? "not-allowed" : "pointer",
+                          opacity: pocSending || !pocMessage.trim() ? 0.6 : 1,
+                          transition: "all 0.2s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          height: "40px",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!pocSending && pocMessage.trim()) {
+                            e.currentTarget.style.transform = "translateY(-1px)";
+                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      >
+                        {pocSending ? (
+                          <>
+                            <Loader2 size={14} className="spin" />
+                            <span>Sending...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send size={14} strokeWidth={2.4} />
+                            <span>Send</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
-            {/* Two-Column Grid */}
-            <div className="dt-grid">
-              {/* Left Column (1fr) */}
-              <div>
-                {/* Panel 1: Return Progress with Dynamic SVG Curve & 5-Step Stepper */}
-                <div className="dt-panel">
-                  <div className="dt-panel-head">
-                    <h2>Return progress</h2>
-                    <span className="dt-tag">
-                      TY{displayTaxYear} · {stageProgressPercentage}% complete
-                    </span>
-                  </div>
+            {/* Inline Point of Contact Expanded Section */}
+            {isPocExpanded && showPocTextarea && (
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: "12px",
+                  border: "1px solid var(--dt-border, #E5E7EB)",
+                  padding: "24px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                  marginBottom: "24px",
+                }}
+              >
+                {/* Additional context or info can go here if needed */}
+                <p style={{ margin: 0, fontSize: "13px", color: "var(--dt-ink-muted)" }}>
+                  Your message will be sent to {pocName || "your support specialist"}.
+                </p>
+              </div>
+            )}
 
-                  {/* <div className="dt-phase-track">
-                    {FILING_PHASES.map((phase) => {
-                      const isDone = currentStage > phase.stage;
-                      const isActive = currentStage === phase.stage;
-                      return (
-                        <div
-                          key={phase.stage}
-                          className={`dt-phase-segment ${isDone ? "done" : ""} ${isActive ? "active" : ""}`}
-                          style={{ "--phase-color": phase.color }}
-                        >
-                          <div className="dt-phase-segment-bar" />
-                          <span>{phase.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div> */}
-
-                  <div className="dt-pipeline-progress">
-                    <div
-                      className="dt-pipeline-progress-fill"
-                      style={{ width: `${stageProgressPercentage}%` }}
-                    />
-                  </div>
-
-                  {/* Area Line Chart with Gradient */}
-                  <div className="dt-chart-wrap">
-                    <svg
-                      viewBox="0 0 560 140"
-                      width="100%"
-                      height="140"
-                      preserveAspectRatio="none"
-                    >
-                      <defs>
-                        <linearGradient id="dtFillGradBg" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#EF4C23" stopOpacity="0.12"></stop>
-                          <stop offset="100%" stopColor="#EF4C23" stopOpacity="0.02"></stop>
-                        </linearGradient>
-                        <linearGradient id="dtFillGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#EF4C23" stopOpacity="0.45"></stop>
-                          <stop offset="55%" stopColor="#EF4C23" stopOpacity="0.18"></stop>
-                          <stop offset="100%" stopColor="#EF4C23" stopOpacity="0.03"></stop>
-                        </linearGradient>
-                      </defs>
-
-                      {/* Full trajectory background shade */}
-                      <path d={fullCurveFillPath} fill="url(#dtFillGradBg)"></path>
-
-                      {/* Horizontal Grid lines */}
-                      <line
-                        x1="0"
-                        y1="35"
-                        x2="560"
-                        y2="35"
-                        stroke="#EEEFF3"
-                        strokeWidth="1"
-                      ></line>
-                      <line
-                        x1="0"
-                        y1="75"
-                        x2="560"
-                        y2="75"
-                        stroke="#EEEFF3"
-                        strokeWidth="1"
-                      ></line>
-                      <line
-                        x1="0"
-                        y1="115"
-                        x2="560"
-                        y2="115"
-                        stroke="#EEEFF3"
-                        strokeWidth="1"
-                      ></line>
-
-                      {/* Faint Projected Full Trajectory Line */}
-                      <path
-                        d="M 30 118 C 80 112, 110 105, 155 98 C 200 92, 235 84, 280 78 C 325 72, 365 62, 405 56 C 450 48, 490 40, 530 35"
-                        fill="none"
-                        stroke="#CBD5E1"
-                        strokeWidth="2"
-                        strokeDasharray="4 4"
-                      ></path>
-
-                      {/* Active Dynamic Area Fill */}
-                      <path
-                        d={activeCurve.fillPath}
-                        fill="url(#dtFillGrad)"
-                      ></path>
-
-                      {/* Active Dynamic Progress Stroke Line */}
-                      <path
-                        d={activeCurve.strokePath}
-                        fill="none"
-                        stroke="#EF4C23"
-                        strokeWidth="2.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      ></path>
-
-                      {/* Dynamic Milestone Points */}
-                      {milestonePoints.map((pt, idx) => {
-                        const isDone = idx < visualStage;
-                        const isCurrent = idx === visualStage;
-                        return (
-                          <g key={idx}>
-                            {isCurrent && (
-                              <circle
-                                cx={pt.x}
-                                cy={pt.y}
-                                r="10"
-                                fill="#EF4C23"
-                                fillOpacity="0.22"
-                              />
-                            )}
-                            <circle
-                              cx={pt.x}
-                              cy={pt.y}
-                              r={isCurrent ? 5.5 : isDone ? 4.5 : 3.5}
-                              fill={isCurrent || isDone ? "#EF4C23" : "#CBD5E1"}
-                              stroke="#FFFFFF"
-                              strokeWidth={isCurrent ? 2 : 1.5}
-                            />
-                          </g>
-                        );
-                      })}
-                    </svg>
-                  </div>
-
-                  {/* Chart Axis Milestones */}
-                  <div className="dt-chart-axis">
-                    {milestonePoints.map((pt, idx) => {
-                      const isDone = idx < visualStage;
-                      const isCurrent = idx === visualStage;
-                      return (
-                        <span
-                          key={idx}
-                          style={{
-                            fontWeight: isCurrent ? 700 : isDone ? 600 : 400,
-                            color: isCurrent ? "#EF4C23" : isDone ? "var(--dt-ink)" : "var(--dt-ink-faint)",
-                          }}
-                        >
-                          {isDone ? "✓ " : ""}
-                          {pt.label}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  <div className="dt-status-grid">
-                    {FILE_STATUS_PIPELINE.map((status, index) => {
-                      const isDone = index < currentPipelineIndex;
-                      const isCurrent = index === currentPipelineIndex;
-                      const state = isCurrent ? "current" : isDone ? "done" : "upcoming";
-                      return (
-                        <span
-                          key={status.code}
-                          className={`dt-status-chip ${state}`}
-                          title={`${status.code} · ${status.label}`}
-                        >
-                          {status.label}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  {/* Dynamic 5-Step Stepper Component */}
-                  <div className="dt-stepper">
-                    {/* Step 1: Intake */}
-                    <div
-                      className="dt-snode"
-                      onClick={() => navigate("/dashboard/basic-info/taxpayer")}
-                      title="Intake & Basic Information"
-                    >
-                      <div className={`dt-scircle ${currentStage > 0 ? "done" : currentStage === 0 ? "active" : ""}`}>
-                        {currentStage > 0 ? "✓" : "01"}
-                      </div>
-                      <div
-                        className="dt-slabel"
-                        style={{
-                          fontWeight: currentStage === 0 ? 600 : 500,
-                          color: currentStage === 0 ? "var(--dt-gold)" : undefined,
-                        }}
-                      >
-                        Intake
-                      </div>
-                    </div>
-
-                    <div className={`dt-sline ${currentStage >= 1 ? "done" : ""}`}></div>
-
-                    {/* Step 2: Documents */}
-                    <div
-                      className="dt-snode"
-                      onClick={() => navigate("/dashboard/upload")}
-                      title="Upload Documents"
-                    >
-                      <div className={`dt-scircle ${currentStage > 1 ? "done" : currentStage === 1 ? "active" : ""}`}>
-                        {currentStage > 1 ? "✓" : "02"}
-                      </div>
-                      <div
-                        className="dt-slabel"
-                        style={{
-                          fontWeight: currentStage === 1 ? 600 : 500,
-                          color: currentStage === 1 ? "var(--dt-gold)" : undefined,
-                        }}
-                      >
-                        Documents
-                      </div>
-                    </div>
-
-                    <div className={`dt-sline ${currentStage >= 2 ? "done" : ""}`}></div>
-
-                    {/* Step 3: Preparation */}
-                    <div
-                      className="dt-snode"
-                      onClick={() => navigate("/dashboard/schedule")}
-                      title="Tax Preparation & Notes"
-                    >
-                      <div className={`dt-scircle ${currentStage > 2 ? "done" : currentStage === 2 ? "active" : ""}`}>
-                        {currentStage > 2 ? "✓" : "03"}
-                      </div>
-                      <div
-                        className="dt-slabel"
-                        style={{
-                          fontWeight: currentStage === 2 ? 600 : 500,
-                          color: currentStage === 2 ? "var(--dt-gold)" : undefined,
-                        }}
-                      >
-                        Preparation
-                      </div>
-                    </div>
-
-                    <div className={`dt-sline ${currentStage >= 3 ? "done" : ""}`}></div>
-
-                    {/* Step 4: Review & Payment */}
-                    <div
-                      className="dt-snode"
-                      onClick={() =>
-                        navigate(currentStage >= 3 ? "/dashboard/tax-summary" : "/dashboard/make-payment")
-                      }
-                      title="Review & Summary / Payment"
-                    >
-                      <div className={`dt-scircle ${currentStage > 3 ? "done" : currentStage === 3 ? "active" : ""}`}>
-                        {currentStage > 3 ? "✓" : "04"}
-                      </div>
-                      <div
-                        className="dt-slabel"
-                        style={{
-                          fontWeight: currentStage === 3 ? 600 : 500,
-                          color: currentStage === 3 ? "var(--dt-gold)" : undefined,
-                        }}
-                      >
-                        Review
-                      </div>
-                    </div>
-
-                    <div className={`dt-sline ${currentStage >= 4 ? "done" : ""}`}></div>
-
-                    {/* Step 5: Filed / Completed */}
-                    <div
-                      className="dt-snode"
-                      onClick={() => navigate(currentStage >= 4 ? "/dashboard/download" : "#")}
-                      title="Filing & Acceptance"
-                    >
-                      <div className={`dt-scircle ${currentStage >= 5 ? "done" : currentStage === 4 ? "active" : ""}`}>
-                        {currentStage >= 5 ? "✓" : "05"}
-                      </div>
-                      <div
-                        className="dt-slabel"
-                        style={{
-                          fontWeight: currentStage >= 4 ? 600 : 500,
-                          color: currentStage >= 5 ? "var(--dt-teal)" : currentStage === 4 ? "var(--dt-gold)" : undefined,
-                        }}
-                      >
-                        Filed
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Panel 2: Dashboard Content in place of Intake */}
-                {renderMainContentPanel()}
+            {/* Return Progress Panel - Full Width */}
+            <div className="dt-panel">
+              <div className="dt-panel-head">
+                <h2>Return progress</h2>
               </div>
 
-              {/* Right Column (310px) */}
-              <div>
-                {/* Panel 1: Completion Donut */}
-                {/* <div className="dt-panel">
-                  <div className="dt-panel-head" style={{ marginBottom: "14px" }}>
-                    <h2>Completion</h2>
-                  </div>
-                  <div className="dt-donut-wrap">
-                    <svg width="88" height="88" viewBox="0 0 88 88">
+              {/* SVG Area Chart - Orange/Red Gradient */}
+              <div className="dt-chart-container" style={{ position: "relative", width: "100%", height: "200px", marginTop: "24px", marginBottom: "24px" }}>
+                <svg width="100%" height="200" viewBox="0 0 100 200" preserveAspectRatio="none" style={{ overflow: "visible" }}>
+                  <defs>
+                    <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style={{ stopColor: "#EF4C23", stopOpacity: 0.3 }} />
+                      <stop offset="100%" style={{ stopColor: "#EF4C23", stopOpacity: 0.05 }} />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Grid lines */}
+                  <line x1="0" y1="40" x2="100" y2="40" stroke="#E5E7EB" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1="80" x2="100" y2="80" stroke="#E5E7EB" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1="120" x2="100" y2="120" stroke="#E5E7EB" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1="160" x2="100" y2="160" stroke="#E5E7EB" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+                  
+                  {/* Area path - smooth bezier curve with orange gradient fill */}
+                  <path
+                    d={(() => {
+                      // X positions for 5 stages (0-4) across the width
+                      const xPositions = [5, 27.5, 50, 72.5, 95];
+                      const yBase = 180; // Bottom baseline
+                      // Y positions when active (decreasing = going up)
+                      const yPoints = [150, 110, 80, 60, 40];
+                      
+                      // Build smooth bezier curve
+                      let path = `M ${xPositions[0]} ${yBase}`; // Start at bottom left
+                      
+                      // Add first point
+                      path += ` L ${xPositions[0]} ${currentStage >= 0 ? yPoints[0] : yBase}`;
+                      
+                      // Add bezier curves between active points
+                      for (let i = 1; i < xPositions.length; i++) {
+                        const prevX = xPositions[i - 1];
+                        const prevY = currentStage >= i - 1 ? yPoints[i - 1] : yBase;
+                        const currX = xPositions[i];
+                        const currY = currentStage >= i ? yPoints[i] : yBase;
+                        
+                        // Control points for smooth curve
+                        const cpX1 = prevX + (currX - prevX) * 0.5;
+                        const cpY1 = prevY;
+                        const cpX2 = currX - (currX - prevX) * 0.5;
+                        const cpY2 = currY;
+                        
+                        path += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${currX} ${currY}`;
+                      }
+                      
+                      // Close path back to baseline
+                      path += ` L ${xPositions[xPositions.length - 1]} ${yBase}`;
+                      path += ` L ${xPositions[0]} ${yBase} Z`;
+                      
+                      return path;
+                    })()}
+                    fill="url(#areaGradient)"
+                  />
+                  
+                  {/* Line path - smooth bezier curve stroke */}
+                  <path
+                    d={(() => {
+                      const xPositions = [5, 27.5, 50, 72.5, 95];
+                      const yBase = 180;
+                      const yPoints = [150, 110, 80, 60, 40];
+                      
+                      // Start at first point
+                      let path = `M ${xPositions[0]} ${currentStage >= 0 ? yPoints[0] : yBase}`;
+                      
+                      // Add bezier curves
+                      for (let i = 1; i < xPositions.length; i++) {
+                        const prevX = xPositions[i - 1];
+                        const prevY = currentStage >= i - 1 ? yPoints[i - 1] : yBase;
+                        const currX = xPositions[i];
+                        const currY = currentStage >= i ? yPoints[i] : yBase;
+                        
+                        const cpX1 = prevX + (currX - prevX) * 0.5;
+                        const cpY1 = prevY;
+                        const cpX2 = currX - (currX - prevX) * 0.5;
+                        const cpY2 = currY;
+                        
+                        path += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${currX} ${currY}`;
+                      }
+                      
+                      return path;
+                    })()}
+                    fill="none"
+                    stroke="#EF4C23"
+                    strokeWidth="1"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  
+                  {/* Data points - dots at each stage */}
+                  {[0, 1, 2, 3, 4].map((stage) => {
+                    const xPositions = [5, 27.5, 50, 72.5, 95];
+                    const yPoints = [150, 110, 80, 60, 40];
+                    const yBase = 180;
+                    const isActive = currentStage >= stage;
+                    const isCurrent = currentStage === stage;
+                    
+                    return (
                       <circle
-                        cx="44"
-                        cy="44"
-                        r="36"
-                        fill="none"
-                        stroke="#EEEFF3"
-                        strokeWidth="10"
-                      ></circle>
-                      <circle
-                        cx="44"
-                        cy="44"
-                        r="36"
-                        fill="none"
-                        stroke="#02A19C"
-                        strokeWidth="10"
-                        strokeDasharray={`${(filingProgressPercentage / 100) * 226.19} 226.19`}
-                        strokeDashoffset="0"
-                        strokeLinecap="round"
-                        transform="rotate(-90 44 44)"
-                      ></circle>
-                      <text
-                        x="44"
-                        y="40"
-                        textAnchor="middle"
-                        fontFamily="Space Grotesk, sans-serif"
-                        fontSize="16"
-                        fontWeight="700"
-                        fill="#14161C"
-                      >
-                        {filingProgressPercentage}%
-                      </text>
-                      <text
-                        x="44"
-                        y="55"
-                        textAnchor="middle"
-                        fontFamily="Inter, sans-serif"
-                        fontSize="9"
-                        fill="#6B7280"
-                      >
-                        complete
-                      </text>
-                    </svg>
+                        key={stage}
+                        cx={xPositions[stage]}
+                        cy={isActive ? yPoints[stage] : yBase}
+                        r={isCurrent ? "2" : "1.5"}
+                        fill={isActive ? "#EF4C23" : "#D1D5DB"}
+                        stroke={isCurrent ? "#fff" : "none"}
+                        strokeWidth={isCurrent ? "0.5" : "0"}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    );
+                  })}
+                </svg>
+              </div>
 
-                    <div className="dt-donut-legend">
-                      <div className="dt-li">
-                        <span
-                          className="dt-sw"
-                          style={{ background: "var(--dt-teal)" }}
-                        ></span>
-                        <span>Done · {dashboardData?.complete_your_intake?.completed ?? completedIntakeCount} step(s)</span>
-                      </div>
-                      <div className="dt-li">
-                        <span
-                          className="dt-sw"
-                          style={{ background: "var(--dt-gold)" }}
-                        ></span>
-                        <span>In progress · {dashboardData?.complete_your_intake?.in_progress ?? 0}</span>
-                      </div>
-                      <div className="dt-li">
-                        <span
-                          className="dt-sw"
-                          style={{ background: "#E7E8EC" }}
-                        ></span>
-                        <span>Remaining · {dashboardData?.complete_your_intake?.not_started ?? (3 - completedIntakeCount)}</span>
-                      </div>
-                    </div>
+              {/* Dynamic 5-Step Stepper Component */}
+              <div className="dt-stepper">
+                {/* Step 1: Registered */}
+                <div
+                  className="dt-snode"
+                  onClick={() => navigate("/dashboard/basic-info/taxpayer")}
+                  title="Registered"
+                >
+                  <div className={`dt-scircle ${currentStage > 0 ? "done" : currentStage === 0 ? "active" : ""}`}>
+                    {currentStage > 0 ? "✓" : "01"}
                   </div>
-                </div> */}
-
-                {/* Panel 2: Point of Contact */}
-                <div className="dt-panel">
-                  <div className="dt-panel-head" style={{ marginBottom: "10px" }}>
-                    <h2>Point of contact</h2>
+                  <div
+                    className="dt-slabel"
+                    style={{
+                      fontWeight: currentStage === 0 ? 600 : 500,
+                      color: currentStage === 0 ? "var(--dt-gold)" : undefined,
+                    }}
+                  >
+                    Registered
                   </div>
-                  <div className="dt-contact">
-                    <div className="dt-av">{pocInitials}</div>
-                    <div>
-                      <h4>{pocName || "Support Specialist"}</h4>
-                      {pocPhone && <p>{pocPhone}</p>}
-                      {pocEmail && <p style={{ fontSize: "12px", color: "#6B7280", marginTop: "2px" }}>{pocEmail}</p>}
-                    </div>
-                  </div>
-
-                  {!isMessageOpen ? (
-                    <button
-                      type="button"
-                      className="dt-contact-btn"
-                      onClick={() => {
-                        setIsMessageOpen(true);
-                        setPocSuccess("");
-                        setPocError("");
-                      }}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
-                    >
-                      <MessageSquare size={15} />
-                      <span>Send message</span>
-                    </button>
-                  ) : (
-                    <div className="poc-chat-box">
-                      <div className="poc-chat-header">
-                        <span>Message {pocFirstName || "Point of Contact"}</span>
-                        <button
-                          type="button"
-                          className="poc-chat-close"
-                          onClick={() => setIsMessageOpen(false)}
-                          title="Close message field"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-
-                      {pocSuccess && (
-                        <div className="poc-chat-alert success">
-                          <Check size={14} />
-                          <span>{pocSuccess}</span>
-                        </div>
-                      )}
-
-                      {pocError && (
-                        <div className="poc-chat-alert error">
-                          <AlertCircle size={14} />
-                          <span>{pocError}</span>
-                        </div>
-                      )}
-
-                      <form onSubmit={handleSendPocMessage} className="poc-chat-input-bar">
-                        <textarea
-                          className="poc-chat-input"
-                          rows="1"
-                          placeholder="Type a message..."
-                          value={pocMessage}
-                          onChange={(e) => setPocMessage(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendPocMessage(e);
-                            }
-                          }}
-                          disabled={pocSending}
-                          autoFocus
-                        />
-                        <button
-                          type="submit"
-                          className="poc-chat-send-btn"
-                          disabled={pocSending || !pocMessage.trim()}
-                          title="Send message"
-                        >
-                          {pocSending ? (
-                            <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                          ) : (
-                            <Send size={15} />
-                          )}
-                        </button>
-                      </form>
-                    </div>
-                  )}
                 </div>
 
-                {/* Panel 3: Recent Activity */}
-                <div className="dt-panel" style={{ marginBottom: "0" }}>
-                  <div className="dt-panel-head" style={{ marginBottom: "4px" }}>
-                    <h2>Recent activity</h2>
+                <div className={`dt-sline ${currentStage >= 1 ? "done" : ""}`}></div>
+
+                {/* Step 2: Scheduled Preparation */}
+                <div
+                  className="dt-snode"
+                  onClick={() => navigate("/dashboard/schedule")}
+                  title="Scheduled Preparation"
+                >
+                  <div className={`dt-scircle ${currentStage > 1 ? "done" : currentStage === 1 ? "active" : ""}`}>
+                    {currentStage > 1 ? "✓" : "02"}
                   </div>
-                  {dashboardData?.recent_activity && dashboardData.recent_activity.length > 0 ? (
-                    dashboardData.recent_activity.map((activity, index) => (
-                      <div className="dt-activity" key={index}>
-                        <div className={`dt-adot ${index === 0 ? "on" : ""}`}></div>
-                        <div>
-                          <p>{activity.title || activity.message || activity.description || "Activity updated"}</p>
-                          <p className="dt-t">
-                            {activity.date
-                              ? new Date(activity.date).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })
-                              : activity.time || "Recent"}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <>
-                      <div className="dt-activity">
-                        <div className="dt-adot on"></div>
-                        <div>
-                          <p>Current status: {displayStatus}</p>
-                          <p className="dt-t">{currentStatusInfo.shortLabel || "Intake"} phase</p>
-                        </div>
-                      </div>
-                      <div className="dt-activity">
-                        <div className="dt-adot"></div>
-                        <div>
-                          <p>Account registered</p>
-                          <p className="dt-t">File #{displayFileNo || "—"}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <div
+                    className="dt-slabel"
+                    style={{
+                      fontWeight: currentStage === 1 ? 600 : 500,
+                      color: currentStage === 1 ? "var(--dt-gold)" : undefined,
+                    }}
+                  >
+                    Scheduled Preparation
+                  </div>
+                </div>
+
+                <div className={`dt-sline ${currentStage >= 2 ? "done" : ""}`}></div>
+
+                {/* Step 3: Payment Pending */}
+                <div
+                  className="dt-snode"
+                  onClick={() => navigate("/dashboard/make-payment")}
+                  title="Payment Pending"
+                >
+                  <div className={`dt-scircle ${currentStage > 2 ? "done" : currentStage === 2 ? "active" : ""}`}>
+                    {currentStage > 2 ? "✓" : "03"}
+                  </div>
+                  <div
+                    className="dt-slabel"
+                    style={{
+                      fontWeight: currentStage === 2 ? 600 : 500,
+                      color: currentStage === 2 ? "var(--dt-gold)" : undefined,
+                    }}
+                  >
+                    Payment Pending
+                  </div>
+                </div>
+
+                <div className={`dt-sline ${currentStage >= 3 ? "done" : ""}`}></div>
+
+                {/* Step 4: Tax Return Review */}
+                <div
+                  className="dt-snode"
+                  onClick={() => navigate("/dashboard/tax-summary")}
+                  title="Tax Return Review"
+                >
+                  <div className={`dt-scircle ${currentStage > 3 ? "done" : currentStage === 3 ? "active" : ""}`}>
+                    {currentStage > 3 ? "✓" : "04"}
+                  </div>
+                  <div
+                    className="dt-slabel"
+                    style={{
+                      fontWeight: currentStage === 3 ? 600 : 500,
+                      color: currentStage === 3 ? "var(--dt-gold)" : undefined,
+                    }}
+                  >
+                    Tax Return Review
+                  </div>
+                </div>
+
+                <div className={`dt-sline ${currentStage >= 4 ? "done" : ""}`}></div>
+
+                {/* Step 5: E-filing Done */}
+                <div
+                  className="dt-snode"
+                  onClick={() => navigate(currentStage >= 4 ? "/dashboard/download" : "#")}
+                  title="E-filing Done"
+                >
+                  <div className={`dt-scircle ${currentStage >= 5 ? "done" : currentStage === 4 ? "active" : ""}`}>
+                    {currentStage >= 5 ? "✓" : "05"}
+                  </div>
+                  <div
+                    className="dt-slabel"
+                    style={{
+                      fontWeight: currentStage >= 4 ? 600 : 500,
+                      color: currentStage >= 5 ? "var(--dt-teal)" : currentStage === 4 ? "var(--dt-gold)" : undefined,
+                    }}
+                  >
+                    E-filing Done
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Overview Guidelines Panel - Full Width */}
+            {renderMainContentPanel()}
           </div>
         </div>
 

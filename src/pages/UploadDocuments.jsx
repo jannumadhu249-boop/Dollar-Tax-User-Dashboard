@@ -166,7 +166,12 @@ const UploadDocuments = () => {
       return;
     }
 
-    if (!document_name.trim()) {
+    // Check if document_name is required (only for "Others" or "Other" type)
+    const selectedType = documentTypes.find((t) => t._id === selectedDocTypeId);
+    const typeName = selectedType?.name?.toLowerCase() || "";
+    const isOthers = typeName === "others" || typeName === "other";
+    
+    if (isOthers && !document_name.trim()) {
       setError("Please enter a name for the file.");
       return;
     }
@@ -181,7 +186,12 @@ const UploadDocuments = () => {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("document_type_id", selectedDocTypeId);
-      formData.append("document_name", document_name.trim());
+      
+      // Only include document_name for "Others"/"Other" type
+      if (isOthers && document_name.trim()) {
+        formData.append("document_name", document_name.trim());
+      }
+      
       formData.append("document", selectedFile);
 
       const res = await fetch(URLS.UploadDocuments, {
@@ -432,23 +442,30 @@ const UploadDocuments = () => {
                     </select>
                   </div>
 
-                  {/* File Name Input */}
-                  <div className="form-group">
-                    <label style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.5rem", display: "block" }}>
-                      Enter name of the file <span style={{ color: "#e63946" }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Enter file name"
-                      value={document_name}
-                      onChange={(e) => {
-                        setDocument_name(e.target.value);
-                        if (error) setError("");
-                      }}
-                      disabled={uploading}
-                    />
-                  </div>
+                  {/* File Name Input - Only show when document type is "Others" or "Other" */}
+                  {selectedDocTypeId && (() => {
+                    const selectedType = documentTypes.find((t) => t._id === selectedDocTypeId);
+                    const typeName = selectedType?.name?.toLowerCase() || "";
+                    const isOthers = typeName === "others" || typeName === "other";
+                    return isOthers ? (
+                      <div className="form-group">
+                        <label style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.5rem", display: "block" }}>
+                          Enter name of the file <span style={{ color: "#e63946" }}>*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Enter file name"
+                          value={document_name}
+                          onChange={(e) => {
+                            setDocument_name(e.target.value);
+                            if (error) setError("");
+                          }}
+                          disabled={uploading}
+                        />
+                      </div>
+                    ) : null;
+                  })()}
 
                   {/* Document File Input */}
                   <div className="form-group">
