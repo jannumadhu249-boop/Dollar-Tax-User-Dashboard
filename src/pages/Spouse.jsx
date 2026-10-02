@@ -57,6 +57,7 @@ const VISA_OPTIONS = [
   { value: "M", label: "M" },
   { value: "Q", label: "Q" },
   { value: "EAD", label: "EAD" },
+  { VALUE: "TN", label: "TN" },
   { value: "GREEN CARD", label: "GREEN CARD" },
   { value: "US Citizen", label: "US CITIZEN" },
   { value: "Not Available", label: "NOT AVAILABLE" },

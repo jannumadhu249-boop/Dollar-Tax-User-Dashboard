@@ -80,8 +80,7 @@ const ClientDashboard = () => {
   const [welcomeUserData, setWelcomeUserData] = useState(null);
 
   // Point of Contact card state
-  const [isPocExpanded, setIsPocExpanded] = useState(false);
-  const [showPocTextarea, setShowPocTextarea] = useState(false);
+  const [showPocModal, setShowPocModal] = useState(false);
   const [pocMessage, setPocMessage] = useState("");
   const [pocSending, setPocSending] = useState(false);
   const [pocSuccess, setPocSuccess] = useState("");
@@ -294,6 +293,16 @@ const ClientDashboard = () => {
   const pocPhone = poc?.contact_number || "";
   const pocEmail = poc?.email || "";
   const pocInitials = getInitials(pocName);
+  
+  // Format phone number as *** *** ****
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return "";
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 10) {
+      return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+    }
+    return phone;
+  };
 
   // Send message to Point of Contact directly inline
   const handleSendPocMessage = async (e) => {
@@ -396,8 +405,38 @@ const ClientDashboard = () => {
     return false;
   })();
 
-  // Milestone points on Return Progress Chart (Intake -> Documents -> Preparation -> Review -> Filed)
-  // Removed - chart visualization replaced with simple stepper
+  // Intake steps should only be shown for three statuses: Registered, Scheduled, and Basic Information
+  const showIntakeSteps = (() => {
+    const code = (
+      currentStatusInfo?.code ||
+      fileStatusCode ||
+      ""
+    ).toUpperCase().trim();
+
+    if (code === "RGO" || code === "SP" || code === "BIP") {
+      return true;
+    }
+
+    const norm = (
+      fileStatusName ||
+      currentStatusInfo?.name ||
+      currentStatusInfo?.label ||
+      displayStatus ||
+      ""
+    ).toLowerCase().trim();
+
+    if (norm.includes("registered")) return true;
+    if (norm.includes("schedul")) return true;
+    if (
+      norm.includes("basic information") ||
+      norm.includes("information pending") ||
+      norm.includes("basic info")
+    ) {
+      return true;
+    }
+
+    return false;
+  })();
 
   const pickImagePath = (value) => {
     if (!value) return "";
@@ -664,31 +703,33 @@ const ClientDashboard = () => {
           </div>
         )}
 
-        {/* Intake Tasks - dynamically populated from API (complete_your_intake.steps & dashboard_content.sections) with graceful fallbacks */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {tasksToRender.map((task, idx) => (
-            <div className="dt-task" key={task.key || idx}>
-              <div className={`dt-ticon ${task.iconClass}`}>
-                <task.IconComp size={16} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="dt-task-row">
-                  <h3>{task.title}</h3>
-                  <span className={getStatusPillClass(task.status)}>
-                    {task.status}
+        {/* Intake Tasks - shown only for registered, scheduled, and basic information statuses */}
+        {showIntakeSteps && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {tasksToRender.map((task, idx) => (
+              <div className="dt-task" key={task.key || idx}>
+                <div className={`dt-ticon ${task.iconClass}`}>
+                  <task.IconComp size={16} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="dt-task-row">
+                    <h3>{task.title}</h3>
+                    <span className={getStatusPillClass(task.status)}>
+                      {task.status}
+                    </span>
+                  </div>
+                  {task.description && <p>{task.description}</p>}
+                  <span
+                    className="dt-link"
+                    onClick={() => navigate(task.navTarget)}
+                  >
+                    {task.navText}
                   </span>
                 </div>
-                {task.description && <p>{task.description}</p>}
-                <span
-                  className="dt-link"
-                  onClick={() => navigate(task.navTarget)}
-                >
-                  {task.navText}
-                </span>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Dynamic sections if present beyond standard intake */}
         {sections.length > defaultStepsConfig.length && (
@@ -787,12 +828,11 @@ const ClientDashboard = () => {
               <div className="dt-metric">
                 <p className="dt-k">Account Information</p>
                 <div className="dt-row2">
-                  <p className="dt-v" style={{ fontSize: "14px", lineHeight: "1.4" }}>
-                    Account - {displayFileNo}
+                  <p className="dt-v" style={{ fontSize: "14px", lineHeight: "1.6", marginBottom: "4px" }}>
+                    A/C No: {displayFileNo}
                   </p>
-                  <span className="dt-trend muted" style={{ fontSize: "12px" }}>
-                    TY{displayTaxYear} · {displayFilingType || "Standard"} ·
-                    <br/> {displayStatus}
+                  <span className="dt-trend muted" style={{ fontSize: "13px", display: "block" }}>
+                    Status: {displayStatus}
                   </span>
                 </div>
               </div>
@@ -827,252 +867,54 @@ const ClientDashboard = () => {
                 </div>
               </div>
 
-              {/* Metric 4 - Point of Contact - Clickable */}
-              <div 
-                className="dt-metric" 
-                onClick={() => {
-                  if (!showPocTextarea) {
-                    setIsPocExpanded(!isPocExpanded);
-                  }
-                }}
-                style={{ cursor: showPocTextarea ? "default" : "pointer", transition: "all 0.2s ease" }}
-                onMouseEnter={(e) => {
-                  if (!showPocTextarea) {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showPocTextarea) {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }
-                }}
-              >
+              {/* Metric 4 - Point of Contact */}
+              <div className="dt-metric">
                 <p className="dt-k">Point of Contact</p>
                 <div className="dt-row2">
                   <p className="dt-v" style={{ fontSize: "16px" }}>
                     {pocName || "Support Specialist"}
                   </p>
                   <span className="dt-trend up">
-                    {pocPhone || pocEmail || "Available"}
+                    {formatPhoneNumber(pocPhone) || pocEmail || "Available"}
                   </span>
                 </div>
 
-                {/* Step 2: Show "Send message" button when card is clicked */}
-                {isPocExpanded && !showPocTextarea && (
-                  <button
-                    type="button"
-                    className="dt-cta-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPocTextarea(true);
-                    }}
-                    style={{
-                      marginTop: "12px",
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      border: "none",
-                      padding: "10px 16px",
-                      borderRadius: "8px",
-                      color: "#fff",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      justifyContent: "center",
-                      width: "100%",
-                      transition: "all 0.2s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-1px)";
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    <MessageSquare size={16} strokeWidth={2.4} />
-                    <span>Send message</span>
-                  </button>
-                )}
-
-                {/* Step 3: Show textarea and action buttons when "Send message" is clicked */}
-                {showPocTextarea && (
-                  <div 
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ marginTop: "12px" }}
-                  >
-                    <textarea
-                      value={pocMessage}
-                      onChange={(e) => setPocMessage(e.target.value)}
-                      placeholder="Type your message here..."
-                      rows={3}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        border: "1px solid var(--dt-border, #E5E7EB)",
-                        borderRadius: "8px",
-                        fontSize: "14px",
-                        fontFamily: "inherit",
-                        resize: "vertical",
-                        marginBottom: "12px",
-                        boxSizing: "border-box",
-                      }}
-                      disabled={pocSending}
-                      autoFocus
-                    />
-
-                    {/* Success Alert */}
-                    {pocSuccess && (
-                      <div
-                        style={{
-                          padding: "8px 10px",
-                          background: "#D1FAE5",
-                          border: "1px solid #10B981",
-                          borderRadius: "6px",
-                          marginBottom: "12px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          fontSize: "12px",
-                          color: "#065F46",
-                        }}
-                      >
-                        <Check size={14} />
-                        <span>{pocSuccess}</span>
-                      </div>
-                    )}
-
-                    {/* Error Alert */}
-                    {pocError && (
-                      <div
-                        style={{
-                          padding: "8px 10px",
-                          background: "#FEE2E2",
-                          border: "1px solid #EF4444",
-                          borderRadius: "6px",
-                          marginBottom: "12px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          fontSize: "12px",
-                          color: "#991B1B",
-                        }}
-                      >
-                        <AlertCircle size={14} />
-                        <span>{pocError}</span>
-                      </div>
-                    )}
-
-                    {/* Cancel and Send buttons - equal width, side by side */}
-                    <div style={{ display: "flex", gap: "12px" }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowPocTextarea(false);
-                          setIsPocExpanded(false);
-                          setPocMessage("");
-                          setPocError("");
-                          setPocSuccess("");
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: "10px 16px",
-                          background: "#F3F4F6",
-                          border: "1px solid #E5E7EB",
-                          borderRadius: "8px",
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          transition: "all 0.2s ease",
-                          color: "#374151",
-                          height: "40px",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#E5E7EB";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "#F3F4F6";
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSendPocMessage(e);
-                        }}
-                        disabled={pocSending || !pocMessage.trim()}
-                        style={{
-                          flex: 1,
-                          padding: "10px 16px",
-                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          border: "none",
-                          borderRadius: "8px",
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          color: "#fff",
-                          cursor: pocSending || !pocMessage.trim() ? "not-allowed" : "pointer",
-                          opacity: pocSending || !pocMessage.trim() ? 0.6 : 1,
-                          transition: "all 0.2s ease",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                          height: "40px",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!pocSending && pocMessage.trim()) {
-                            e.currentTarget.style.transform = "translateY(-1px)";
-                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "none";
-                        }}
-                      >
-                        {pocSending ? (
-                          <>
-                            <Loader2 size={14} className="spin" />
-                            <span>Sending...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send size={14} strokeWidth={2.4} />
-                            <span>Send</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {/* Send message button - opens modal */}
+                <button
+                  type="button"
+                  className="dt-cta-primary"
+                  onClick={() => setShowPocModal(true)}
+                  style={{
+                    marginTop: "12px",
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    border: "none",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    justifyContent: "center",
+                    width: "100%",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <MessageSquare size={16} strokeWidth={2.4} />
+                  <span>Send message</span>
+                </button>
               </div>
             </section>
-
-            {/* Inline Point of Contact Expanded Section */}
-            {isPocExpanded && showPocTextarea && (
-              <div
-                style={{
-                  background: "#fff",
-                  borderRadius: "12px",
-                  border: "1px solid var(--dt-border, #E5E7EB)",
-                  padding: "24px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                  marginBottom: "24px",
-                }}
-              >
-                {/* Additional context or info can go here if needed */}
-                <p style={{ margin: 0, fontSize: "13px", color: "var(--dt-ink-muted)" }}>
-                  Your message will be sent to {pocName || "your support specialist"}.
-                </p>
-              </div>
-            )}
 
             {/* Return Progress Panel - Full Width */}
             <div className="dt-panel">
@@ -1196,11 +1038,7 @@ const ClientDashboard = () => {
               {/* Dynamic 5-Step Stepper Component */}
               <div className="dt-stepper">
                 {/* Step 1: Registered */}
-                <div
-                  className="dt-snode"
-                  onClick={() => navigate("/dashboard/basic-info/taxpayer")}
-                  title="Registered"
-                >
+                <div className="dt-snode" title="Registered">
                   <div className={`dt-scircle ${currentStage > 0 ? "done" : currentStage === 0 ? "active" : ""}`}>
                     {currentStage > 0 ? "✓" : "01"}
                   </div>
@@ -1217,12 +1055,8 @@ const ClientDashboard = () => {
 
                 <div className={`dt-sline ${currentStage >= 1 ? "done" : ""}`}></div>
 
-                {/* Step 2: Scheduled Preparation */}
-                <div
-                  className="dt-snode"
-                  onClick={() => navigate("/dashboard/schedule")}
-                  title="Scheduled Preparation"
-                >
+                {/* Step 2: Scheduled */}
+                <div className="dt-snode" title="Scheduled Preparation">
                   <div className={`dt-scircle ${currentStage > 1 ? "done" : currentStage === 1 ? "active" : ""}`}>
                     {currentStage > 1 ? "✓" : "02"}
                   </div>
@@ -1233,18 +1067,15 @@ const ClientDashboard = () => {
                       color: currentStage === 1 ? "var(--dt-gold)" : undefined,
                     }}
                   >
-                    Scheduled Preparation
+                    Schedule a Consultation
                   </div>
                 </div>
 
                 <div className={`dt-sline ${currentStage >= 2 ? "done" : ""}`}></div>
 
-                {/* Step 3: Payment Pending */}
-                <div
-                  className="dt-snode"
-                  onClick={() => navigate("/dashboard/make-payment")}
-                  title="Payment Pending"
-                >
+
+                {/* Step 3: Preparation Done */}
+                <div className="dt-snode" title="Scheduled Preparation">
                   <div className={`dt-scircle ${currentStage > 2 ? "done" : currentStage === 2 ? "active" : ""}`}>
                     {currentStage > 2 ? "✓" : "03"}
                   </div>
@@ -1255,18 +1086,14 @@ const ClientDashboard = () => {
                       color: currentStage === 2 ? "var(--dt-gold)" : undefined,
                     }}
                   >
-                    Payment Pending
+                    Preparation Done
                   </div>
                 </div>
 
                 <div className={`dt-sline ${currentStage >= 3 ? "done" : ""}`}></div>
 
-                {/* Step 4: Tax Return Review */}
-                <div
-                  className="dt-snode"
-                  onClick={() => navigate("/dashboard/tax-summary")}
-                  title="Tax Return Review"
-                >
+                {/* Step 4: Payment Pending */}
+                <div className="dt-snode" title="Payment Pending">
                   <div className={`dt-scircle ${currentStage > 3 ? "done" : currentStage === 3 ? "active" : ""}`}>
                     {currentStage > 3 ? "✓" : "04"}
                   </div>
@@ -1277,25 +1104,39 @@ const ClientDashboard = () => {
                       color: currentStage === 3 ? "var(--dt-gold)" : undefined,
                     }}
                   >
-                    Tax Return Review
+                    Payment Done
                   </div>
                 </div>
 
                 <div className={`dt-sline ${currentStage >= 4 ? "done" : ""}`}></div>
 
-                {/* Step 5: E-filing Done */}
-                <div
-                  className="dt-snode"
-                  onClick={() => navigate(currentStage >= 4 ? "/dashboard/download" : "#")}
-                  title="E-filing Done"
-                >
-                  <div className={`dt-scircle ${currentStage >= 5 ? "done" : currentStage === 4 ? "active" : ""}`}>
-                    {currentStage >= 5 ? "✓" : "05"}
+                {/* Step 4: Tax Return Review */}
+                <div className="dt-snode" title="Tax Return Review">
+                  <div className={`dt-scircle ${currentStage > 4 ? "done" : currentStage === 4 ? "active" : ""}`}>
+                    {currentStage > 4 ? "✓" : "05"}
                   </div>
                   <div
                     className="dt-slabel"
                     style={{
-                      fontWeight: currentStage >= 4 ? 600 : 500,
+                      fontWeight: currentStage === 4 ? 600 : 500,
+                      color: currentStage === 4 ? "var(--dt-gold)" : undefined,
+                    }}
+                  >
+                    Tax Return Review
+                  </div>
+                </div>
+
+                <div className={`dt-sline ${currentStage >= 5 ? "done" : ""}`}></div>
+
+                {/* Step 5: E-filing Done */}
+                <div className="dt-snode" title="E-filing Done">
+                  <div className={`dt-scircle ${currentStage >= 5 ? "done" : currentStage === 5 ? "active" : ""}`}>
+                    {currentStage >= 5 ? "✓" : "06"}
+                  </div>
+                  <div
+                    className="dt-slabel"
+                    style={{
+                      fontWeight: currentStage >= 5 ? 600 : 500,
                       color: currentStage >= 5 ? "var(--dt-teal)" : currentStage === 4 ? "var(--dt-gold)" : undefined,
                     }}
                   >
@@ -1323,6 +1164,247 @@ const ClientDashboard = () => {
         }}
         userData={welcomeUserData}
       />
+
+      {/* Point of Contact Message Modal */}
+      {showPocModal && (
+        <div
+          onClick={() => {
+            setShowPocModal(false);
+            setPocMessage("");
+            setPocError("");
+            setPocSuccess("");
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "500px",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #E5E7EB",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #FED7AA 0%, #FB923C 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "#fff",
+                  }}
+                >
+                  {pocInitials}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "#1F2937" }}>
+                    {pocName || "Support Specialist"}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "14px", color: "#6B7280" }}>
+                    {formatPhoneNumber(pocPhone) || pocEmail}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPocModal(false);
+                  setPocMessage("");
+                  setPocError("");
+                  setPocSuccess("");
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#9CA3AF",
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "#374151"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "#9CA3AF"}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: "24px" }}>
+              {pocSuccess && (
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    background: "#D1FAE5",
+                    border: "1px solid #10B981",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "14px",
+                    color: "#065F46",
+                  }}
+                >
+                  <Check size={18} />
+                  <span>{pocSuccess}</span>
+                </div>
+              )}
+
+              {pocError && (
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    background: "#FEE2E2",
+                    border: "1px solid #EF4444",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "14px",
+                    color: "#991B1B",
+                  }}
+                >
+                  <AlertCircle size={18} />
+                  <span>{pocError}</span>
+                </div>
+              )}
+
+              <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>
+                Your Message
+              </label>
+              <textarea
+                value={pocMessage}
+                onChange={(e) => setPocMessage(e.target.value)}
+                placeholder="Type your message here..."
+                rows={5}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid #D1D5DB",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                onBlur={(e) => e.currentTarget.style.borderColor = "#D1D5DB"}
+                disabled={pocSending}
+                autoFocus
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #E5E7EB",
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPocModal(false);
+                  setPocMessage("");
+                  setPocError("");
+                  setPocSuccess("");
+                }}
+                style={{
+                  padding: "10px 20px",
+                  background: "#F3F4F6",
+                  border: "1px solid #D1D5DB",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  color: "#374151",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#E5E7EB"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "#F3F4F6"}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendPocMessage}
+                disabled={pocSending || !pocMessage.trim()}
+                style={{
+                  padding: "10px 24px",
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  color: "#fff",
+                  cursor: pocSending || !pocMessage.trim() ? "not-allowed" : "pointer",
+                  opacity: pocSending || !pocMessage.trim() ? 0.6 : 1,
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+                onMouseEnter={(e) => {
+                  if (!pocSending && pocMessage.trim()) {
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {pocSending ? (
+                  <>
+                    <Loader2 size={16} className="spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} strokeWidth={2.4} />
+                    <span>Send Message</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

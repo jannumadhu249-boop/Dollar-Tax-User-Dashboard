@@ -41,6 +41,8 @@ export const STATUS_NAME_TO_CODE = {
   "registered users": "RGO",
   registered: "RGO",
   "scheduling pending": "SP",
+  "interview scheduled": "SP",
+  "scheduled": "SP",
   "information pending": "BIP",
   "basic information pending": "BIP",
   "interview pending": "IP",
@@ -137,6 +139,9 @@ export const resolveFilingStatusInfo = ({
   }
   if (norm.includes("document") || norm.includes("upload")) {
     return { stage: 1, label: fileStatusName, shortLabel: "Documents", code: "DP", name: fileStatusName };
+  }
+  if (norm.includes("schedul") || norm.includes("interview")) {
+    return { stage: 1, label: fileStatusName, shortLabel: "Scheduled", code: "SP", name: fileStatusName };
   }
 
   return {
