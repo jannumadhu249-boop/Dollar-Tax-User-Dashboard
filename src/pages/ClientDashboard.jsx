@@ -875,7 +875,7 @@ const ClientDashboard = () => {
                     {pocName || "Support Specialist"}
                   </p>
                   <span className="dt-trend up">
-                    {formatPhoneNumber(pocPhone) || pocEmail || "Available"}
+                    {pocPhone ? `+91 ${formatPhoneNumber(pocPhone)}` : pocEmail || "Available"}
                   </span>
                 </div>
 
@@ -1228,7 +1228,7 @@ const ClientDashboard = () => {
                     {pocName || "Support Specialist"}
                   </h3>
                   <p style={{ margin: 0, fontSize: "14px", color: "#6B7280" }}>
-                    {formatPhoneNumber(pocPhone) || pocEmail}
+                    {pocPhone ? `+91 ${formatPhoneNumber(pocPhone)}` : pocEmail}
                   </p>
                 </div>
               </div>
