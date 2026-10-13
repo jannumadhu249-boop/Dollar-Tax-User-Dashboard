@@ -691,7 +691,7 @@ const ClientDashboard = () => {
 
         {dashboardBody && (
           <div className="dt-overview-copy">
-            <p>{dashboardBody}</p>
+            <p className="dt-overview-copy-bold">{dashboardBody}</p>
           </div>
         )}
 
@@ -828,13 +828,16 @@ const ClientDashboard = () => {
               <div className="dt-metric">
                 <p className="dt-k">Account Information</p>
                 <div className="dt-row2">
-                  <p className="dt-v" style={{ fontSize: "14px", lineHeight: "1.6", marginBottom: "4px" }}>
+                  <p className="dt-v" style={{ fontSize: "14px" }}>
                     A/C No: {displayFileNo}
                   </p>
-                  <span className="dt-trend muted" style={{ fontSize: "13px", display: "block" }}>
+                  {/* <span className="dt-trend muted" style={{ fontSize: "13px", display: "block" }}>
                     Status: {displayStatus}
-                  </span>
+                  </span> */}
                 </div>
+                <span className="dt-trend" style={{ fontSize: "13px", display: "block" }}>
+                  Status: {displayStatus}
+                </span>
               </div>
 
               {/* Metric 2 - Days to Deadline */}
@@ -875,7 +878,7 @@ const ClientDashboard = () => {
                     {pocName || "Support Specialist"}
                   </p>
                   <span className="dt-trend up">
-                    {pocPhone ? `+91 ${formatPhoneNumber(pocPhone)}` : pocEmail || "Available"}
+                    {pocPhone ? `+1 ${formatPhoneNumber(pocPhone)}` : pocEmail || "Available"}
                   </span>
                 </div>
 
@@ -1228,7 +1231,7 @@ const ClientDashboard = () => {
                     {pocName || "Support Specialist"}
                   </h3>
                   <p style={{ margin: 0, fontSize: "14px", color: "#6B7280" }}>
-                    {pocPhone ? `+91 ${formatPhoneNumber(pocPhone)}` : pocEmail}
+                    {pocPhone ? `+1 ${formatPhoneNumber(pocPhone)}` : pocEmail}
                   </p>
                 </div>
               </div>

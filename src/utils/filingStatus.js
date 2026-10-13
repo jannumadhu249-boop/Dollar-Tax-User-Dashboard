@@ -1,3 +1,4 @@
+
 export const FILE_STATUS_MAP = {
   RGO: { stage: 0, label: "Registered Users", shortLabel: "Intake" },
   SP: { stage: 0, label: "Scheduling Pending", shortLabel: "Intake" },

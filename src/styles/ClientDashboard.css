@@ -443,6 +443,15 @@
   font-size: 14px;
   line-height: 1.65;
   color: var(--dt-ink-soft);
+  font-weight: 600;
+}
+
+.dt-overview-copy-bold {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--dt-ink);
+  font-weight: 700;
+  margin: 0;
 }
 
 .dt-pipeline-progress {
@@ -640,7 +649,7 @@
 
 .dt-task h3 {
   font-size: 14.5px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 5px;
   color: var(--dt-ink);
 }
@@ -651,6 +660,7 @@
   color: var(--dt-ink-soft);
   margin: 0 0 8px;
   max-width: 54ch;
+  font-weight: 400;
 }
 
 .dt-task-row {
